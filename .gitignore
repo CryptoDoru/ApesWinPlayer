@@ -1,6 +1,10 @@
 # Environment variables
 .env
 
+# Contract files
+DicegameContract.txt
+ConractABIRef.txt
+
 # Python
 __pycache__/
 *.py[cod]
