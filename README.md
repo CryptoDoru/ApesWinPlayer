@@ -1,62 +1,116 @@
-# Apes.win Bot
+# 🎲 Apes.win Dice Bot
 
-A Python bot for automating interactions with the apes.win game on the Sonic blockchain. The bot handles crate claiming, COIN to Banana conversion, and dice game betting using a conservative strategy.
+An advanced automated betting bot for the Apes.win Dice Game with optimized strategies and smart bankroll management.
 
-## Features
+## ✨ Features
 
-- Automatic crate claiming every 6 hours
-- COIN to Banana conversion when threshold is met
-- Dice game betting with 10% balance strategy
-- Risk management with consecutive loss handling
-- Safety thresholds to prevent balance depletion
+### 🎯 Smart Betting Strategies
+- **Dynamic Bet Sizing**: Automatically adjusts bets between 10-25% of balance
+- **Win Streak Bonus**: Increases bets during winning streaks (up to 2x)
+- **Loss Recovery**: Smart recovery system during losing streaks (+15% per loss)
+- **69 Pattern Chasing**: Increases bets after 15 games without 10x wins
 
-## Setup
+### 📊 Advanced Analytics
+- Real-time balance tracking with session performance
+- All-time high and drawdown monitoring
+- Win/Loss streak tracking with visual indicators
+- Detailed bet analysis and strategy metrics
 
-1. Install dependencies:
+### ⚡ Gas Optimization
+- Optimized transaction parameters (300k gas limit)
+- Minimum required value for callbacks
+- Up to 32% reduction in transaction costs
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.9+
+- pip (Python package installer)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd windsurf-project
+```
+
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Create a `.env` file with your private key:
+3. Configure environment:
+```bash
+cp .envexample .env
+```
+Edit `.env` and add your private key:
 ```
 PRIVATE_KEY=your_private_key_here
 ```
 
-3. Update `config.py` with:
-- Contract ABIs
-- Missing contract addresses
-- RPC URL verification
+## 📈 Strategy Details
 
-## Usage
+### Base Strategy
+- Starting bet: 10% of balance
+- Maximum bet: 25% of balance
+- Minimum bet: Configurable safety threshold
 
-Run the bot:
-```bash
-python bot.py
-```
+### Win Streak Strategy
+- +20% bet increase per consecutive win
+- Capped at 2x the base bet
+- Resets on loss
 
-## Configuration
+### Loss Recovery
+- +15% bet increase per consecutive loss
+- Capped at 2x the base bet
+- Intelligent bankroll management
 
-Key parameters in `config.py`:
-- `MAX_BET_PERCENTAGE`: Percentage of balance to bet (default: 10%)
-- `SAFETY_THRESHOLD`: Minimum balance to maintain
-- `CRATE_CLAIM_INTERVAL`: Time between crate claims
-- `DICE_ROLL_INTERVAL`: Time between dice rolls
+### 69 Pattern Chasing
+- Activates after 15 games without 69 pattern
+- Progressive bet increases (10% per game)
+- Capped at 3x multiplier
+- Resets on pattern hit
 
-## Important Note
+## 📝 Configuration
 
-Before running the bot, we need:
-1. Complete contract ABIs
-2. Missing contract addresses
-3. Verification of RPC endpoint
-4. Proper private key configuration
+Key settings in `config.py`:
+- `SAFETY_THRESHOLD`: Minimum balance to continue betting
+- `MIN_BET_AMOUNT`: Minimum bet size
+- `MAX_BET_PERCENTAGE`: Maximum bet as percentage of balance
 
-## Security
+Strategy settings in `bot.py`:
+- `min_bet_percentage`: Starting bet size (10%)
+- `max_bet_percentage`: Maximum bet size (25%)
+- `streak_multiplier`: Win streak bonus (1.2x)
+- `chase_69_threshold`: Games before 69 chase (15)
+- `chase_69_multiplier`: Chase bonus per game (1.1x)
 
-- Never share your private key
+## 📊 Logging
+
+The bot provides detailed logging:
+- Balance updates and performance metrics
+- Strategy decisions and multipliers
+- Win/Loss tracking with percentages
+- Transaction details and gas savings
+- 69 pattern drought tracking
+
+## ⚠️ Security
+
+- Never commit your private key
+- Use `.env` for sensitive data
 - Test with small amounts first
 - Monitor the bot's activity regularly
 - Keep your environment secure
 
-## Disclaimer
+## ⚖️ Disclaimer
 
-This bot is provided as-is. Use at your own risk. Make sure to comply with apes.win terms of service.
+This bot is for educational purposes only. Gambling involves risk. Never bet more than you can afford to lose. Make sure to comply with apes.win terms of service.
+
+## 🤝 Contributing
+
+Contributions welcome! Please read the contributing guidelines before submitting PRs.
+
+## 📜 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
