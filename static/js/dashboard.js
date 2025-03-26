@@ -253,14 +253,17 @@ function updateGameStatus() {
         }
         
         // More specific win/loss detection
-        if (text.includes('WON')) {
+        // Check exact patterns from bot.py logs
+        if (text.includes('✨ WIN:') || text.includes('WIN STREAK:')) {
             hasResult = true;
             resultWin = true;
+            console.log('Win detected from log: ' + text);
         }
         
-        if (text.includes('LOST')) {
+        if (text.includes('📉 LOSS:') || text.includes('LOSS STREAK:')) {
             hasResult = true;
             resultWin = false;
+            console.log('Loss detected from log: ' + text);
         }
         
         // Check for next bet calculation
