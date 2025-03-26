@@ -92,34 +92,81 @@ python bot.py
 
 ## 📈 Strategy Details
 
-### Season 2 Improved Strategies
-- **Balanced Risk**: Optimized for the new Apes Win Season 2 mechanics
-- **Volatility Management**: Adaptive bet sizing based on real-time performance
-- **Visual Pattern Recognition**: Enhanced dashboard for pattern detection
+### Season 2 Optimized Strategy
 
-### Base Strategy
-- Starting bet: 10% of balance (configurable in dashboard)
-- Maximum bet: 25% of balance (adjustable for risk tolerance)
-- Minimum bet: Configurable safety threshold with auto-stop feature
+This bot employs a sophisticated betting strategy designed specifically for Apes Win Season 2 dice mechanics. The strategy dynamically adjusts bet sizes based on game patterns and streak analysis.
 
-### Win Streak Strategy
-- +20% bet increase per consecutive win
-- Capped at 2x the base bet
-- Resets on loss
-- Visual indicators in dashboard
+### Default Betting Strategy (Core Algorithm)
 
-### Loss Recovery
-- +15% bet increase per consecutive loss
-- Capped at 2x the base bet
-- Intelligent bankroll management
-- Automatic recovery pacing
+```python
+# Actual code from bot.py (simplified)
+def calculate_next_bet(balance, loss_streak, games_since_69):
+    # Base bet starts at 10% of balance
+    base_percentage = 0.10  # min_bet_percentage
+    
+    # Apply loss recovery multiplier
+    if loss_streak > 0:
+        recovery_multiplier = min(1.0 + (loss_streak * 0.15), 2.5)  # +15% per loss, cap at 2.5x
+    else:
+        recovery_multiplier = 1.0
+        
+    # Apply 69 pattern chase bonus
+    if games_since_69 >= 15:  # chase_69_threshold
+        games_over = games_since_69 - 15 + 1
+        chase_bonus = min(1.1 ** games_over, 3.0)  # +10% compounding, cap at 3x
+    else:
+        chase_bonus = 1.0
+        
+    # Calculate final percentage (capped at max 25%)
+    bet_percentage = min(
+        base_percentage * recovery_multiplier * chase_bonus,
+        0.25  # max_bet_percentage
+    )
+    
+    # Calculate actual bet amount
+    bet_amount = max(MIN_BET_AMOUNT, int(balance * bet_percentage))
+    
+    return bet_amount
+```
 
-### 69 Pattern Chasing
-- Activates after 15 games without 69 pattern (10x multiplier)
-- Progressive bet increases (10% per game)
-- Capped at 3x multiplier
-- Resets on pattern hit
-- Real-time tracking with visual indicators
+### Base Strategy Details
+- **Starting Bet**: 10% of current balance (adjustable)
+- **Minimum Bet**: Never goes below a configurable safety threshold (defaults to 500)
+- **Maximum Bet**: Capped at 25% of balance to prevent over-betting
+- **Safety Threshold**: Auto-stops betting when balance falls below minimum threshold
+
+### Loss Recovery System
+- Each consecutive loss increases bet by **15%** (multiplicative)
+- Formula: `base_bet * (1 + (loss_streak * 0.15))`
+- Hard cap at **2.5x** the base bet to prevent excessive risk
+- Automatically resets after any win
+- Example progression:
+  - 1st loss: 1.15x base bet
+  - 2nd loss: 1.30x base bet
+  - 3rd loss: 1.45x base bet
+  - 10th loss: 2.5x base bet (capped)
+
+### 69 Pattern Detection & Chasing
+- Identifies the valuable "69" pattern that yields **10x multipliers**
+- Detection logic checks for:
+  - Combinations that sum to 9 (e.g., 3+6, 4+5)
+  - Presence of 6 in the dice results
+  - Contract-specific bit patterns (72 without double 3, or 112)
+- After **15 consecutive games** without hitting the pattern, activates chase mode:
+  - Increases bet by compounding 10% per game over threshold
+  - Formula: `base_bet * (1.1 ^ (games_over_threshold))`
+  - Hard cap at **3x** the base bet
+  - Resets immediately when the pattern is hit
+- Example progression:
+  - After 15 games: 1.1x base bet
+  - After 20 games: 1.61x base bet
+  - After 25 games: 2.65x base bet
+  - After 30 games: 3.0x base bet (capped)
+
+### Strategy Combinations
+- **Multiple multipliers stack**: Loss recovery and 69 chase can combine
+- **Global cap**: Final bet is always capped at 25% of balance regardless of multipliers
+- **Minimal intervention**: Strategy runs autonomously once configured
 
 ## 📝 Configuration
 
