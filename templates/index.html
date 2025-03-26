@@ -138,28 +138,101 @@
                     </div>
                 </div>
                 <div class="card settings-card">
-                    <h3>Bot Settings</h3>
-                    <div class="settings">
+                    <div class="card-header">
+                        <h3>Bot Settings</h3>
+                        <button id="editSettingsBtn" class="btn btn-sm btn-primary" title="Edit settings">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    
+                    <!-- View mode - just display settings -->
+                    <div id="settings-view-mode" class="settings">
                         <div>
                             <span class="settings-label">Min Bet:</span>
-                            <span class="settings-value" id="minBet">15%</span>
+                            <span class="settings-value" id="minBet">10%</span>
                         </div>
                         <div>
                             <span class="settings-label">Max Bet:</span>
-                            <span class="settings-value" id="maxBet">30%</span>
+                            <span class="settings-value" id="maxBet">25%</span>
+                        </div>
+                        <div>
+                            <span class="settings-label">Win Streak Bonus:</span>
+                            <span class="settings-value" id="winStreakRate">20%</span>
                         </div>
                         <div>
                             <span class="settings-label">Loss Recovery:</span>
-                            <span class="settings-value" id="lossRecovery">20%</span>
+                            <span class="settings-value" id="lossRecovery">15%</span>
                         </div>
                         <div>
                             <span class="settings-label">69 Threshold:</span>
-                            <span class="settings-value" id="chaseThreshold">10</span>
+                            <span class="settings-value" id="chaseThreshold">15</span>
                         </div>
                         <div>
                             <span class="settings-label">69 Multiplier:</span>
                             <span class="settings-value" id="chaseMultiplier">1.1x</span>
                         </div>
+                    </div>
+                    
+                    <!-- Edit mode - form for changing settings -->
+                    <div id="settings-edit-mode" class="settings-form" style="display: none;">
+                        <form id="settingsForm">
+                            <div class="form-group">
+                                <label for="minBetInput">Min Bet (% of balance):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="minBetInput" min="1" max="50" step="1" value="10">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">Starting bet: 10% means your first bet will be 10% of your balance</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="maxBetInput">Max Bet (% of balance):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="maxBetInput" min="10" max="50" step="1" value="25">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">Maximum bet: Cap on how much of your balance you're willing to bet</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="winStreakRateInput">Win Streak Bonus (% increase per win):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="winStreakRateInput" min="5" max="50" step="5" value="20">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">Each consecutive win increases your next bet by this percentage</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="lossRecoveryInput">Loss Recovery (% increase after loss):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="lossRecoveryInput" min="5" max="50" step="5" value="15">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">After a loss, increase next bet by this percentage to recover</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="chaseThresholdInput">69 Pattern Threshold (games):</label>
+                                <input type="number" id="chaseThresholdInput" min="5" max="50" step="1" value="15">
+                                <div class="settings-help-text">Start increasing bets after this many games without a 69 pattern</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="chaseMultiplierInput">69 Pattern Multiplier:</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="chaseMultiplierInput" min="1.05" max="1.5" step="0.05" value="1.1">
+                                    <span class="input-icon">x</span>
+                                </div>
+                                <div class="settings-help-text">Multiplier for each game beyond the threshold when chasing the 69 pattern</div>
+                            </div>
+                            
+                            <div class="settings-actions">
+                                <button type="button" id="saveSettingsBtn" class="btn btn-success"><i class="fas fa-save"></i> Save</button>
+                                <button type="button" id="cancelSettingsBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+                                <button type="button" id="resetDefaultsBtn" class="btn btn-warning"><i class="fas fa-undo"></i> Reset to Defaults</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -198,5 +271,35 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    
+    <!-- Direct script to ensure button functionality -->
+    <script>
+        // Direct button handlers to ensure they work
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded - direct script running');
+            
+            // Get reference to edit button
+            var editBtn = document.getElementById('editSettingsBtn');
+            var viewMode = document.getElementById('settings-view-mode');
+            var editMode = document.getElementById('settings-edit-mode');
+            
+            console.log('Edit button direct reference:', editBtn);
+            
+            if (editBtn) {
+                // Remove any existing event listeners
+                editBtn.replaceWith(editBtn.cloneNode(true));
+                
+                // Get fresh reference after cloning
+                editBtn = document.getElementById('editSettingsBtn');
+                
+                // Add direct click handler
+                editBtn.onclick = function() {
+                    console.log('Edit button clicked - direct handler');
+                    viewMode.style.display = 'none';
+                    editMode.style.display = 'block';
+                };
+            }
+        });
+    </script>
 </body>
 </html>

@@ -40,12 +40,51 @@ const lastUpdate = document.getElementById('lastUpdate');
 const allTimeHigh = document.getElementById('allTimeHigh');
 const sessionProfit = document.getElementById('sessionProfit');
 
-// Settings elements
+// Settings elements - View mode
 const minBet = document.getElementById('minBet');
 const maxBet = document.getElementById('maxBet');
+const winStreakRate = document.getElementById('winStreakRate');
 const lossRecovery = document.getElementById('lossRecovery');
 const chaseThreshold = document.getElementById('chaseThreshold');
 const chaseMultiplier = document.getElementById('chaseMultiplier');
+
+// Settings elements - Edit mode
+let editSettingsBtn; 
+let settingsViewMode;
+let settingsEditMode;
+let settingsForm;
+let saveSettingsBtn;
+let cancelSettingsBtn;
+let resetDefaultsBtn;
+
+// Initialize settings elements after DOM is fully loaded
+function initSettingsElements() {
+    console.log('Initializing settings elements');
+    
+    // Get references to all settings-related elements
+    editSettingsBtn = document.getElementById('editSettingsBtn');
+    settingsViewMode = document.getElementById('settings-view-mode');
+    settingsEditMode = document.getElementById('settings-edit-mode');
+    settingsForm = document.getElementById('settingsForm');
+    saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+    resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
+    
+    console.log('Edit Button Element:', editSettingsBtn);
+    console.log('Settings View Mode Element:', settingsViewMode);
+    console.log('Settings Edit Mode Element:', settingsEditMode);
+    
+    // Set up event listeners for settings buttons
+    setupSettingsButtons();
+}
+
+// Settings inputs
+const minBetInput = document.getElementById('minBetInput');
+const maxBetInput = document.getElementById('maxBetInput');
+const winStreakRateInput = document.getElementById('winStreakRateInput');
+const lossRecoveryInput = document.getElementById('lossRecoveryInput');
+const chaseThresholdInput = document.getElementById('chaseThresholdInput');
+const chaseMultiplierInput = document.getElementById('chaseMultiplierInput');
 
 // State
 let autoScroll = true;
@@ -481,11 +520,21 @@ function fetchSettings() {
     fetch('/api/current_settings')
         .then(response => response.json())
         .then(data => {
+            // Update display values
             minBet.textContent = `${(data.min_bet_percentage * 100).toFixed(0)}%`;
             maxBet.textContent = `${(data.max_bet_percentage * 100).toFixed(0)}%`;
+            winStreakRate.textContent = `${(data.win_streak_rate * 100).toFixed(0)}%`;
             lossRecovery.textContent = `${(data.loss_recovery_rate * 100).toFixed(0)}%`;
             chaseThreshold.textContent = data.chase_69_threshold;
             chaseMultiplier.textContent = `${data.chase_69_multiplier}x`;
+            
+            // Also update form input values
+            minBetInput.value = (data.min_bet_percentage * 100).toFixed(0);
+            maxBetInput.value = (data.max_bet_percentage * 100).toFixed(0);
+            winStreakRateInput.value = (data.win_streak_rate * 100).toFixed(0);
+            lossRecoveryInput.value = (data.loss_recovery_rate * 100).toFixed(0);
+            chaseThresholdInput.value = data.chase_69_threshold;
+            chaseMultiplierInput.value = data.chase_69_multiplier.toFixed(2);
         })
         .catch(error => console.error('Error fetching settings:', error));
 }
@@ -566,6 +615,162 @@ autoScrollBtn.addEventListener('click', () => {
     autoScroll = !autoScroll;
     autoScrollBtn.classList.toggle('btn-active', autoScroll);
 });
+
+// Function to set up event listeners for settings buttons
+function setupSettingsButtons() {
+    console.log('Setting up settings buttons');
+    
+    // Edit button - Switch to edit mode
+    if (editSettingsBtn) {
+        editSettingsBtn.onclick = function() {
+            console.log('Edit Settings button clicked');
+            settingsViewMode.style.display = 'none';
+            settingsEditMode.style.display = 'block';
+        };
+        console.log('Edit button handler attached');
+    } else {
+        console.error('Edit Settings button not found');
+    }
+    
+    // Cancel button - Return to view mode without saving
+    if (cancelSettingsBtn) {
+        cancelSettingsBtn.onclick = function() {
+            console.log('Cancel Settings button clicked');
+            settingsEditMode.style.display = 'none';
+            settingsViewMode.style.display = 'block';
+            fetchSettings(); // Reset form to current settings
+        };
+    }
+    
+    // Reset to defaults button
+    if (resetDefaultsBtn) {
+        resetDefaultsBtn.onclick = function() {
+            console.log('Reset Defaults button clicked');
+            minBetInput.value = '10';
+            maxBetInput.value = '25';
+            winStreakRateInput.value = '20';
+            lossRecoveryInput.value = '15';
+            chaseThresholdInput.value = '15';
+            chaseMultiplierInput.value = '1.10';
+        };
+    }
+    
+    // Save settings button
+    if (saveSettingsBtn) {
+        saveSettingsBtn.onclick = function() {
+            console.log('Save Settings button clicked');
+            
+            // Validate inputs
+            if (parseInt(minBetInput.value) >= parseInt(maxBetInput.value)) {
+                alert('Min bet percentage must be less than max bet percentage');
+                return;
+            }
+            
+            // Prepare settings data
+            const settings = {
+                min_bet_percentage: parseInt(minBetInput.value) / 100,
+                max_bet_percentage: parseInt(maxBetInput.value) / 100,
+                win_streak_rate: parseInt(winStreakRateInput.value) / 100,
+                loss_recovery_rate: parseInt(lossRecoveryInput.value) / 100,
+                chase_69_threshold: parseInt(chaseThresholdInput.value),
+                chase_69_multiplier: parseFloat(chaseMultiplierInput.value)
+            };
+            
+            // Save settings to the server
+            fetch('/api/save_settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update displayed settings
+                    fetchSettings();
+                    
+                    // Switch back to view mode
+                    settingsEditMode.style.display = 'none';
+                    settingsViewMode.style.display = 'block';
+                    
+                    // Add success message
+                    addLogMessage('INFO', 'Bot settings updated successfully');
+                } else {
+                    alert('Failed to save settings: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving settings:', error);
+                alert('An error occurred while saving settings');
+            });
+        };
+    }
+}
+
+// Apply same fix to other settings buttons
+if (resetDefaultsBtn) {
+    resetDefaultsBtn.addEventListener('click', function() {
+        console.log('Reset Defaults button clicked');
+        // Reset form values to defaults
+        minBetInput.value = '10';
+        maxBetInput.value = '25';
+        winStreakRateInput.value = '20';
+        lossRecoveryInput.value = '15';
+        chaseThresholdInput.value = '15';
+        chaseMultiplierInput.value = '1.10';
+    });
+}
+
+if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', function() {
+        console.log('Save Settings button clicked');
+        // Validate form inputs
+        if (parseInt(minBetInput.value) >= parseInt(maxBetInput.value)) {
+            alert('Min bet percentage must be less than max bet percentage');
+            return;
+        }
+    
+    // Prepare settings data
+    const settings = {
+        min_bet_percentage: parseInt(minBetInput.value) / 100,
+        max_bet_percentage: parseInt(maxBetInput.value) / 100,
+        win_streak_rate: parseInt(winStreakRateInput.value) / 100,
+        loss_recovery_rate: parseInt(lossRecoveryInput.value) / 100,
+        chase_69_threshold: parseInt(chaseThresholdInput.value),
+        chase_69_multiplier: parseFloat(chaseMultiplierInput.value)
+    };
+    
+    // Save settings to the server
+    fetch('/api/save_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update displayed settings
+            fetchSettings();
+            
+            // Switch back to view mode
+            settingsEditMode.style.display = 'none';
+            settingsViewMode.style.display = 'block';
+            
+            // Add success message to logs
+            addLogMessage('INFO', 'Bot settings updated successfully');
+        } else {
+            alert('Failed to save settings: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving settings:', error);
+        alert('An error occurred while saving settings');
+    });
+    });
+}
 
 // Prevent scrolling from disabling auto-scroll
 logMessages.addEventListener('wheel', () => {
@@ -770,6 +975,11 @@ function reconnectWallet(privateKey) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded - initializing dashboard');
+    
+    // Initialize settings elements and listeners first
+    initSettingsElements();
+    
     // Initial fetch of stats and settings
     updateStats();
     fetchSettings();

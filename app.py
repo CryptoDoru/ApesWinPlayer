@@ -546,11 +546,53 @@ def get_settings():
     settings = {
         'min_bet_percentage': current_bot.min_bet_percentage,
         'max_bet_percentage': current_bot.max_bet_percentage,
+        'win_streak_rate': current_bot.win_streak_rate,
         'loss_recovery_rate': current_bot.loss_recovery_rate,
         'chase_69_threshold': current_bot.chase_69_threshold,
         'chase_69_multiplier': current_bot.chase_69_multiplier
     }
     return jsonify(settings)
+
+# Route to save new bot settings
+@app.route('/api/save_settings', methods=['POST'])
+def save_settings():
+    user_id = get_user_id()
+    current_bot = get_bot(user_id=user_id)
+    
+    try:
+        # Get settings from request json
+        settings = request.get_json()
+        
+        # Validate settings
+        if settings['min_bet_percentage'] >= settings['max_bet_percentage']:
+            return jsonify({
+                'status': 'error',
+                'message': 'Minimum bet percentage must be less than maximum bet percentage'
+            })
+            
+        if settings['min_bet_percentage'] < 0.01 or settings['max_bet_percentage'] > 0.5:
+            return jsonify({
+                'status': 'error',
+                'message': 'Bet percentages must be between 1% and 50%'
+            })
+        
+        # Update bot settings
+        current_bot.min_bet_percentage = float(settings['min_bet_percentage'])
+        current_bot.max_bet_percentage = float(settings['max_bet_percentage'])
+        current_bot.win_streak_rate = float(settings['win_streak_rate'])
+        current_bot.loss_recovery_rate = float(settings['loss_recovery_rate'])
+        current_bot.chase_69_threshold = int(settings['chase_69_threshold'])
+        current_bot.chase_69_multiplier = float(settings['chase_69_multiplier'])
+        
+        logger.info(f"Bot settings updated for user {user_id[:8]}...")
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        logger.error(f"Error saving settings for user {user_id[:8]}...: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
 
 # Create directories if running locally
 try:
