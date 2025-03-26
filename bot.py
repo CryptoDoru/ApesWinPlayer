@@ -289,6 +289,10 @@ class ApesWinBot:
             # Calculate next bet
             new_balance = initial_balance + balance_change
             
+            # Initialize multipliers for next betting round
+            recovery_multiplier = 1.0
+            chase_bonus = 1.0
+            
             # Apply 69 chase bonus
             if self.games_since_69 >= self.chase_69_threshold:
                 games_over = self.games_since_69 - self.chase_69_threshold + 1
