@@ -95,9 +95,22 @@ def update_balances(user_id=None):
     if not user_id:
         user_id = get_user_id()
         
+    # Initialize user stats if needed
+    if user_id not in user_stats:
+        user_stats[user_id] = get_default_stats()
+        
     try:
         # Get current bot instance or initialize it
         current_bot = get_bot(user_id=user_id)
+        
+        # Check if wallet is connected (has private key)
+        if not current_bot.contract_manager.private_key:
+            # No wallet connected yet
+            user_stats[user_id]['current_balance'] = "0.00"
+            user_stats[user_id]['s_token_balance'] = "0.00"
+            user_stats[user_id]['last_update'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            logger.info(f"No wallet connected for user {user_id[:8]}...")
+            return False
         
         # Get banana balance
         raw_banana_balance = current_bot.contract_manager.get_banana_balance()
@@ -112,6 +125,7 @@ def update_balances(user_id=None):
         user_stats[user_id]['s_token_balance'] = formatted_s_balance
         user_stats[user_id]['last_update'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
+        logger.info(f"Updated balances for user {user_id[:8]}... BANANA: {formatted_banana_balance}, S-TOKEN: {formatted_s_balance}")
         return True
     except Exception as e:
         logger.error(f"Error updating balances for user {user_id[:8]}...: {e}")
@@ -316,15 +330,23 @@ def set_private_key():
         current_bot = get_bot(private_key, user_id)
         wallet_address = current_bot.update_wallet(private_key)
         
+        # Make sure user stats exists
+        if user_id not in user_stats:
+            user_stats[user_id] = get_default_stats()
+        
         # Update balances
-        update_balances(user_id)
-        user_stats = get_user_stats()
+        success = update_balances(user_id)
+        if not success:
+            logger.error(f"Failed to update balances after setting private key for user {user_id[:8]}")
+        
+        # Log the connected wallet
+        logger.info(f"Wallet connected for user {user_id[:8]}... Address: {wallet_address}")
         
         return jsonify({
             'status': 'success',
             'wallet_address': wallet_address,
-            'current_balance': user_stats['current_balance'],
-            's_token_balance': user_stats['s_token_balance']
+            'current_balance': user_stats[user_id]['current_balance'],
+            's_token_balance': user_stats[user_id]['s_token_balance']
         })
     except Exception as e:
         logger.error(f"Error setting private key: {e}")

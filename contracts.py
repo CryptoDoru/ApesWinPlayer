@@ -14,12 +14,25 @@ load_dotenv()
 class ContractManager:
     def __init__(self, private_key=None):
         self.web3 = ContractConfig.get_web3()
+        self.private_key = None
         
         # Use provided private key or get from environment variables
         if not private_key:
             private_key = os.getenv("PRIVATE_KEY")
             if not private_key:
-                raise ValueError("PRIVATE_KEY not found in environment variables or provided as argument")
+                # Create a dummy account with no funds
+                self.account = Account.create()
+                # Initialize contract (combined dice game and token contract)
+                self.contract = self.web3.eth.contract(
+                    address=ContractConfig.CONTRACT_ADDRESS,
+                    abi=ContractConfig.DICE_GAME_ABI
+                )
+                # Track current game ID
+                self.current_game_id = None
+                return
+        
+        # Store the private key
+        self.private_key = private_key
             
         # Initialize account with private key
         self.account: LocalAccount = Account.from_key(private_key)
@@ -37,7 +50,11 @@ class ContractManager:
         """Update the account with a new private key"""
         if not private_key:
             raise ValueError("Private key cannot be empty")
-            
+        
+        # Store the private key    
+        self.private_key = private_key
+        
+        # Update the account
         self.account = Account.from_key(private_key)
         return self.account.address
     
