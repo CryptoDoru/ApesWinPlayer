@@ -134,10 +134,14 @@ def bot_worker():
     formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
     
     # Store both raw and formatted balances
-    stats['start_balance'] = raw_banana_balance / 10**18 # Convert raw balance to decimal
+    decimal_balance = raw_banana_balance / 10**18 # Convert raw balance to decimal
+    stats['start_balance'] = decimal_balance
     stats['current_balance'] = formatted_banana_balance
     stats['s_token_balance'] = formatted_s_balance
     stats['session_profit'] = 0
+    
+    # Set session start balance in the bot instance
+    current_bot.session_start_balance = decimal_balance
     
     logger.info(f"🚀 Bot starting with {formatted_banana_balance} 🍌 balance and {formatted_s_balance} S token balance...")
     

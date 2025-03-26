@@ -50,10 +50,19 @@ class ApesWinBot:
         self.base_bet_amount = None  # Will be set on first run
         self.win_streak = 0  # Track consecutive wins (for statistics only)
         self.loss_streak = 0  # Track consecutive losses
-        self.max_bet_percentage = 0.30  # Maximum bet as percentage of balance (30%)
-        self.min_bet_percentage = 0.15  # Minimum bet as percentage of balance (15%)
-        self.loss_recovery_rate = 0.20  # Increase bet by 20% for each loss
+        self.max_bet_percentage = 0.25  # Maximum bet as percentage of balance (25%)
+        self.min_bet_percentage = 0.10  # Minimum bet as percentage of balance (10%)
+        self.loss_recovery_rate = 0.15  # Increase bet by 15% for each loss
         self.all_time_high = 0  # Track highest balance
+        
+        # Initialize 69 pattern tracking
+        self.games_since_69 = 0  # Number of games since last 69 pattern
+        self.chase_69_threshold = 15  # Start chasing after this many games
+        self.chase_69_multiplier = 1.1  # Increase bet by 10% for each game over threshold
+        
+        # Session tracking
+        self.session_start_balance = 0  # Will be set on first run
+        self.session_games = 0  # Total games this session
         
     def update_wallet(self, private_key):
         """Update the wallet with a new private key"""
