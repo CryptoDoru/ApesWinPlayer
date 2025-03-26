@@ -48,10 +48,11 @@ class ApesWinBot:
     def __init__(self, private_key=None):
         self.contract_manager = ContractManager(private_key)
         self.base_bet_amount = None  # Will be set on first run
-        self.win_streak = 0  # Track consecutive wins (for statistics only)
+        self.win_streak = 0  # Track consecutive wins for win streak strategy
         self.loss_streak = 0  # Track consecutive losses
         self.max_bet_percentage = 0.25  # Maximum bet as percentage of balance (25%)
         self.min_bet_percentage = 0.10  # Minimum bet as percentage of balance (10%)
+        self.win_streak_rate = 0.20  # Increase bet by 20% for each win
         self.loss_recovery_rate = 0.15  # Increase bet by 15% for each loss
         self.all_time_high = 0  # Track highest balance
         
@@ -66,12 +67,44 @@ class ApesWinBot:
         
     def update_wallet(self, private_key):
         """Update the wallet with a new private key"""
-        wallet_address = self.contract_manager.update_private_key(private_key)
-        return wallet_address
+        try:
+            wallet_address = self.contract_manager.update_private_key(private_key)
+            
+            # Reset stats when wallet changes
+            self.win_streak = 0
+            self.loss_streak = 0
+            self.games_since_69 = 0
+            
+            # Update session balance for profit tracking
+            try:
+                current_balance = self.contract_manager.format_bananas(
+                    self.contract_manager.get_banana_balance()
+                )
+                self.session_start_balance = float(current_balance)
+                logging.info(f"Wallet updated with balance: {current_balance} 🍌")
+            except Exception as e:
+                logging.error(f"Error getting initial balance after wallet update: {e}")
+                
+            return wallet_address
+        except Exception as e:
+            logging.error(f"Error updating wallet: {e}")
+            raise ValueError(f"Failed to update wallet: {e}")
     
     def format_bananas(self, amount):
-        """Convert wei amount to readable banana format"""
-        return f"{amount / 1e18:.3f}"
+        """Convert wei amount to readable banana format
+        
+        Args:
+            amount: Amount in wei
+            
+        Returns:
+            float: Formatted amount in banana units
+        """
+        try:
+            # Convert to float first to ensure numeric value
+            return float(amount) / 1e18
+        except (ValueError, TypeError):
+            logging.error(f"Error formatting banana amount: {amount}")
+            return 0.0
         
     def wait_for_game_result(self, game_id: int, initial_balance: int) -> Tuple[bool, int, Optional[list]]:
         """Wait for game result and return outcome
@@ -153,16 +186,18 @@ class ApesWinBot:
             logging.info(f"   Loss Streak:  {self.loss_streak}x {'📉' * min(self.loss_streak, 5)}")
             logging.info(f"   69 Drought:   {self.games_since_69}x {'🌟' if self.games_since_69 >= self.chase_69_threshold else ''}")
             # Calculate multipliers
+            win_bonus = 1.0
             recovery = 1.0
             chase_bonus = 1.0
             
-            # Track win streak (stats only, not used for betting)
+            # Apply win streak bonus
             if self.win_streak > 0:
-                logging.info(f"   Win Streak:   {self.win_streak}x (No bonus)")
+                win_bonus = min(1.0 + (self.win_streak * self.win_streak_rate), 2.0)  # Cap at 2x
+                logging.info(f"   Win Streak:   {self.win_streak}x (Bonus: {win_bonus:.2f}x) 🔥")
             
             # Apply loss recovery
             if self.loss_streak > 0:
-                recovery = min(1.0 + (self.loss_streak * self.loss_recovery_rate), 2.5)
+                recovery = min(1.0 + (self.loss_streak * self.loss_recovery_rate), 2.0)  # Cap at 2x
                 logging.info(f"   Recovery:     {recovery:.2f}x")
                 
             # Add 69 pattern chasing bonus if we're in a drought
@@ -171,11 +206,21 @@ class ApesWinBot:
                 chase_bonus = min(self.chase_69_multiplier ** games_over, 3.0)  # Cap at 3x
                 logging.info(f"   69 Chase:     {chase_bonus:.2f}x 🌟")
             
+            # Apply all multipliers to base bet amount
+            actual_bet = int(self.base_bet_amount * win_bonus * recovery * chase_bonus)
+            
+            # Cap the bet at max percentage
+            max_allowed_bet = int(initial_balance * self.max_bet_percentage)
+            if actual_bet > max_allowed_bet:
+                logging.info(f"   ⚠️ Bet capped at {self.max_bet_percentage*100}% of balance")
+                actual_bet = max_allowed_bet
+            
             logging.info(f"\n🎯 BET DETAILS")
-            logging.info(f"   Amount:      {self.format_bananas(self.base_bet_amount):>10} 🍌")
-            logging.info(f"   Percentage:  {(self.base_bet_amount / initial_balance * 100):>9.1f}%")
+            logging.info(f"   Base Amount:  {self.format_bananas(self.base_bet_amount):>10} 🍌")
+            logging.info(f"   Final Amount: {self.format_bananas(actual_bet):>10} 🍌")
+            logging.info(f"   Percentage:   {(actual_bet / initial_balance * 100):>9.1f}%")
             logging.info("="*50)
-            game_id = self.contract_manager.place_dice_bet(self.base_bet_amount)
+            game_id = self.contract_manager.place_dice_bet(actual_bet)
             
             # If bet failed, return None to trigger delay
             if game_id is None:
@@ -230,28 +275,19 @@ class ApesWinBot:
             # Update win/loss streaks based on balance change
             if balance_change > 0:
                 self.win_streak += 1
-                self.loss_streak = 0
+                self.loss_streak = 0  # Reset loss streak
+                win_bonus = min(1.0 + (self.win_streak * self.win_streak_rate), 2.0)  # Cap at 2x
                 logging.info(f"✨ WIN: +{self.format_bananas(balance_change)} 🍌")
+                logging.info(f"🔥 WIN STREAK: {self.win_streak}x (Next bonus: {win_bonus:.2f}x)")
             else:
-                self.win_streak = 0
                 self.loss_streak += 1
+                self.win_streak = 0  # Reset win streak
+                recovery_multiplier = min(1.0 + (self.loss_streak * self.loss_recovery_rate), 2.0)  # Cap at 2x
                 logging.info(f"📉 LOSS: -{self.format_bananas(abs(balance_change))} 🍌")
+                logging.info(f"📉 LOSS STREAK: {self.loss_streak}x (Next recovery: {recovery_multiplier:.2f}x)")
             
             # Calculate next bet
             new_balance = initial_balance + balance_change
-            
-            # Calculate multipliers for next bet
-            recovery_multiplier = 1.0
-            chase_bonus = 1.0
-            
-            # Track win streak (stats only, not used for betting)
-            if self.win_streak > 0:
-                logging.info(f"🔥 WIN STREAK: {self.win_streak}x (No bonus applied)")
-            
-            # Apply loss recovery
-            if self.loss_streak > 0:
-                recovery_multiplier = min(1.0 + (self.loss_streak * self.loss_recovery_rate), 2.5)  # +20% per loss, cap at 2.5x
-                logging.info(f"📉 LOSS STREAK: {self.loss_streak}x (Recovery: {recovery_multiplier:.2f}x)")
             
             # Apply 69 chase bonus
             if self.games_since_69 >= self.chase_69_threshold:

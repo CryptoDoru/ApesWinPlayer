@@ -51,12 +51,29 @@ class ContractManager:
         if not private_key:
             raise ValueError("Private key cannot be empty")
         
-        # Store the private key    
-        self.private_key = private_key
-        
-        # Update the account
-        self.account = Account.from_key(private_key)
-        return self.account.address
+        # Basic validation for private key format
+        if not private_key.startswith('0x') or len(private_key) != 66:
+            raise ValueError("Invalid private key format")
+            
+        try:
+            # Try to create account first to validate the private key
+            new_account = Account.from_key(private_key)
+            
+            # If we get here, the private key is valid
+            self.private_key = private_key
+            self.account = new_account
+            
+            # Re-initialize the contract with the new account
+            self.contract = self.web3.eth.contract(
+                address=ContractConfig.CONTRACT_ADDRESS,
+                abi=ContractConfig.DICE_GAME_ABI
+            )
+            
+            logging.info(f"Wallet connected successfully: {self.account.address}")
+            return self.account.address
+        except Exception as e:
+            logging.error(f"Error updating private key: {e}")
+            raise ValueError(f"Invalid private key: {e}")
     
     def get_native_balance(self) -> int:
         """Get native token (S) balance"""

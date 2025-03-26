@@ -53,15 +53,34 @@ def get_user_id():
 def get_bot(private_key=None, user_id=None):
     if not user_id:
         user_id = get_user_id()
+    
+    # If bot exists for this user
+    if user_id in user_bots and user_bots[user_id] is not None:
+        # If private key is provided and different from current one, update it
+        if private_key and (not user_bots[user_id].contract_manager.private_key or 
+                           private_key != user_bots[user_id].contract_manager.private_key):
+            try:
+                # Update existing bot with new private key
+                wallet_address = user_bots[user_id].contract_manager.update_private_key(private_key)
+                logger.info(f"Updated private key for existing bot for user {user_id[:8]}... Address: {wallet_address}")
+            except Exception as e:
+                logger.error(f"Error updating private key for user {user_id[:8]}...: {e}")
+        return user_bots[user_id]
+    
+    # Create new bot instance
+    try:
+        user_bots[user_id] = ApesWinBot(private_key)
+        logger.info(f"Created new bot for user {user_id[:8]}...")
         
-    if user_id not in user_bots or user_bots[user_id] is None:
-        try:
-            user_bots[user_id] = ApesWinBot(private_key)
-            logger.info(f"Created new bot for user {user_id[:8]}...")
-        except Exception as e:
-            logger.error(f"Error initializing bot for user {user_id[:8]}...: {e}")
-            # Create with minimum functionality
-            user_bots[user_id] = ApesWinBot()
+        # If private key was provided, verify wallet connection
+        if private_key and user_bots[user_id].contract_manager.account:
+            address = user_bots[user_id].contract_manager.account.address
+            logger.info(f"New bot created with wallet connected: {address}")
+    except Exception as e:
+        logger.error(f"Error initializing bot for user {user_id[:8]}...: {e}")
+        # Create with minimum functionality
+        user_bots[user_id] = ApesWinBot()
+    
     return user_bots[user_id]
 
 # Default stats template
@@ -112,13 +131,32 @@ def update_balances(user_id=None):
             logger.info(f"No wallet connected for user {user_id[:8]}...")
             return False
         
-        # Get banana balance
-        raw_banana_balance = current_bot.contract_manager.get_banana_balance()
-        formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
+        # Add a small delay to ensure contract calls are ready
+        time.sleep(0.1)
         
-        # Get S token balance
-        raw_s_balance = current_bot.contract_manager.get_native_balance()
-        formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
+        try:
+            # Get banana balance with error handling
+            raw_banana_balance = current_bot.contract_manager.get_banana_balance()
+            formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
+            # Make sure we have a float before formatting
+            if isinstance(formatted_banana_balance, str):
+                try:
+                    formatted_banana_balance = float(formatted_banana_balance)
+                except ValueError:
+                    formatted_banana_balance = 0.0
+            formatted_banana_balance = f"{formatted_banana_balance:.2f}"
+        except Exception as e:
+            logger.error(f"Error getting banana balance: {e}")
+            formatted_banana_balance = user_stats[user_id].get('current_balance', "0.00")
+        
+        try:
+            # Get S token balance with error handling
+            raw_s_balance = current_bot.contract_manager.get_native_balance()
+            formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
+            formatted_s_balance = f"{formatted_s_balance:.2f}"
+        except Exception as e:
+            logger.error(f"Error getting S token balance: {e}")
+            formatted_s_balance = user_stats[user_id].get('s_token_balance', "0.00")
         
         # Update user-specific stats with balances
         user_stats[user_id]['current_balance'] = formatted_banana_balance
@@ -302,7 +340,18 @@ def home():
 def get_stats():
     # Get user-specific stats
     user_id = get_user_id()
-    return jsonify(get_user_stats())
+    stats = get_user_stats()
+    
+    # Check if user has a bot with a connected wallet
+    if user_id in user_bots and user_bots[user_id].contract_manager.private_key:
+        # Add wallet connection status and address
+        stats['wallet_connected'] = True
+        stats['wallet_address'] = user_bots[user_id].contract_manager.account.address
+    else:
+        stats['wallet_connected'] = False
+        stats['wallet_address'] = None
+        
+    return jsonify(stats)
 
 @app.route('/api/refresh_balances')
 def refresh_balances():
@@ -326,18 +375,34 @@ def set_private_key():
         if not private_key or not private_key.startswith('0x') or len(private_key) != 66:
             return jsonify({'status': 'error', 'message': 'Invalid private key format'}), 400
         
-        # Initialize or update the bot with the new private key
-        current_bot = get_bot(private_key, user_id)
-        wallet_address = current_bot.update_wallet(private_key)
+        # Get bot instance for this user first without setting private key
+        current_bot = get_bot(user_id=user_id)
+        
+        # Update the wallet with the new private key
+        try:
+            wallet_address = current_bot.contract_manager.update_private_key(private_key)
+            logger.info(f"Wallet address updated: {wallet_address}")
+        except ValueError as e:
+            logger.error(f"Private key validation error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 400
         
         # Make sure user stats exists
         if user_id not in user_stats:
             user_stats[user_id] = get_default_stats()
         
-        # Update balances
-        success = update_balances(user_id)
+        # Update balances with retry
+        retries = 2
+        success = False
+        
+        while retries > 0 and not success:
+            success = update_balances(user_id)
+            if not success:
+                logger.warning(f"Retrying balance update ({retries} attempts left)")
+                time.sleep(0.5)  # Short delay before retry
+                retries -= 1
+        
         if not success:
-            logger.error(f"Failed to update balances after setting private key for user {user_id[:8]}")
+            logger.error(f"Failed to update balances after multiple attempts for user {user_id[:8]}")
         
         # Log the connected wallet
         logger.info(f"Wallet connected for user {user_id[:8]}... Address: {wallet_address}")

@@ -44,44 +44,72 @@ const chaseMultiplier = document.getElementById('chaseMultiplier');
 let autoScroll = true;
 let botRunning = false;
 
+// Stats state to prevent flashing/glitching
+let currentStats = {
+    current_balance: '0.00',
+    s_token_balance: '0.00',
+    win_streak: 0,
+    loss_streak: 0,
+    games_since_69: 0,
+    total_games: 0,
+    total_wins: 0,
+    total_losses: 0,
+    session_profit: 0,
+    last_update: '',
+    all_time_high: '0.00',
+    log_messages: [],
+    recent_games: []
+};
+
 // Functions
 function updateStats() {
     fetch('/api/stats')
         .then(response => response.json())
         .then(data => {
+            // Only update UI if we have valid data
+            if (!data.current_balance) return;
+            
+            // Cache stats to prevent UI glitches
+            currentStats = {...currentStats, ...data};
+            
             // Update balances with icons
-            currentBalance.textContent = `${data.current_balance} 🍌`;
-            sTokenBalance.textContent = `${data.s_token_balance} S`;
+            currentBalance.textContent = `${currentStats.current_balance} 🍌`;
+            sTokenBalance.textContent = `${currentStats.s_token_balance} S`;
             
             // Update streak stats
-            winStreak.textContent = data.win_streak;
-            lossStreak.textContent = data.loss_streak;
-            gamesSince69.textContent = data.games_since_69;
+            winStreak.textContent = currentStats.win_streak;
+            lossStreak.textContent = currentStats.loss_streak;
+            gamesSince69.textContent = currentStats.games_since_69;
             
             // Ensure performance metrics update properly
-            totalGames.textContent = data.total_games;
-            totalWins.textContent = data.total_wins;
-            totalLosses.textContent = data.total_losses;
+            totalGames.textContent = currentStats.total_games;
+            totalWins.textContent = currentStats.total_wins;
+            totalLosses.textContent = currentStats.total_losses;
             
             // Display session profit with color coding
-            const profit = data.session_profit;
+            const profit = currentStats.session_profit;
             sessionProfit.textContent = profit > 0 ? `+${profit}` : profit;
             sessionProfit.style.color = profit > 0 ? 'green' : profit < 0 ? 'red' : 'inherit';
             
             // Calculate win rate
-            const calculatedWinRate = data.total_games > 0 
-                ? ((data.total_wins / data.total_games) * 100).toFixed(1)
+            const calculatedWinRate = currentStats.total_games > 0 
+                ? ((currentStats.total_wins / currentStats.total_games) * 100).toFixed(1)
                 : 0;
             winRate.textContent = `${calculatedWinRate}%`;
             
-            lastUpdate.textContent = data.last_update;
-            allTimeHigh.textContent = data.all_time_high;
+            lastUpdate.textContent = currentStats.last_update || 'Never';
+            allTimeHigh.textContent = currentStats.all_time_high;
             
             // Update log messages
-            updateLogs(data.log_messages);
+            updateLogs(currentStats.log_messages);
             
             // Update recent games
-            updateRecentGames(data.recent_games);
+            updateRecentGames(currentStats.recent_games);
+            
+            // Check for wallet status
+            if (data.wallet_connected) {
+                updateWalletUI(true, data.wallet_address);
+            }
         })
         .catch(error => console.error('Error fetching stats:', error));
 }
@@ -350,33 +378,29 @@ connectWalletBtn.addEventListener('click', () => {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            // Update UI to show connected state
-            walletConnected = true;
-            walletDisconnectedView.style.display = 'none';
-            walletConnectedView.style.display = 'block';
+            // Update the UI with the new wallet info
+            updateWalletUI(true, data.wallet_address);
             
-            // Display wallet address with truncation
-            const address = data.wallet_address;
-            const truncatedAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-            connectedAddress.textContent = truncatedAddress;
-            connectedAddress.title = address; // Full address on hover
+            // Update cached stats to prevent glitching
+            currentStats.current_balance = data.current_balance || '0.00';
+            currentStats.s_token_balance = data.s_token_balance || '0.00';
             
-            // Update balances
-            currentBalance.textContent = `${data.current_balance} 🍌`;
-            sTokenBalance.textContent = `${data.s_token_balance} S`;
+            // Update the balance displays
+            currentBalance.textContent = `${currentStats.current_balance} 🍌`;
+            sTokenBalance.textContent = `${currentStats.s_token_balance} S`;
             
             // Store the private key in session storage (not local storage for security)
             // This allows reconnection if page is refreshed
             sessionStorage.setItem('dice_bot_pk', privateKey);
             
-            // Enable start button if it was disabled
-            startBtn.disabled = false;
-            
             // Clear the input for security
             privateKeyInput.value = '';
+            
+            // Force an immediate stats update
+            setTimeout(updateStats, 100);
         } else {
             // Show error
-            alert('Error connecting wallet: ' + data.message);
+            alert('Error connecting wallet: ' + (data.message || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -415,17 +439,80 @@ disconnectWalletBtn.addEventListener('click', () => {
     }
 });
 
+// Update wallet UI based on connection status
+function updateWalletUI(connected, address = null) {
+    if (connected) {
+        walletConnected = true;
+        walletDisconnectedView.style.display = 'none';
+        walletConnectedView.style.display = 'block';
+        
+        if (address) {
+            // Display wallet address with truncation
+            const truncatedAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+            connectedAddress.textContent = truncatedAddress;
+            connectedAddress.title = address; // Full address on hover
+        }
+        
+        // Enable start button
+        startBtn.disabled = false;
+    } else {
+        walletConnected = false;
+        walletConnectedView.style.display = 'none';
+        walletDisconnectedView.style.display = 'block';
+        
+        // Clear address
+        connectedAddress.textContent = '';
+        connectedAddress.title = '';
+        
+        // Disable start button
+        startBtn.disabled = true;
+    }
+}
+
 // Check for stored private key on page load
 function checkStoredWallet() {
     const storedKey = sessionStorage.getItem('dice_bot_pk');
     if (storedKey) {
         // Auto-reconnect with stored key
-        privateKeyInput.value = storedKey;
-        connectWalletBtn.click();
+        reconnectWallet(storedKey);
     } else {
         // No stored key, disable start button
         startBtn.disabled = true;
     }
+}
+
+// Helper function to reconnect wallet from session storage
+function reconnectWallet(privateKey) {
+    fetch('/api/set_private_key', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ private_key: privateKey })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            updateWalletUI(true, data.wallet_address);
+            
+            // Update balances
+            if (data.current_balance) {
+                currentStats.current_balance = data.current_balance;
+                currentStats.s_token_balance = data.s_token_balance;
+                
+                currentBalance.textContent = `${data.current_balance} 🍌`;
+                sTokenBalance.textContent = `${data.s_token_balance} S`;
+            }
+        } else {
+            // Failed to reconnect with stored key
+            sessionStorage.removeItem('dice_bot_pk');
+            console.error("Failed to reconnect with stored key");
+        }
+    })
+    .catch(error => {
+        console.error('Error reconnecting wallet:', error);
+        sessionStorage.removeItem('dice_bot_pk');
+    });
 }
 
 // Initialize
