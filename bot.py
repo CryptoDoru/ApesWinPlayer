@@ -117,7 +117,20 @@ class ApesWinBot:
         """
         logging.info("⏳ Rolling dice...")
         
-        while True:
+        # Set maximum wait time to prevent infinite waiting
+        max_wait_time = 60  # seconds
+        start_time = time.time()
+        
+        while time.time() - start_time < max_wait_time:
+            # Check for stop signal
+            if hasattr(self, '_should_stop') and self._should_stop:
+                logging.info("🛑 Stop signal detected while waiting for game result")
+                logging.info("Game in progress will complete but no new bets will be placed")
+                # Return a signal that indicates we should stop but still wait for the result
+                # We still want to wait for this game to complete since the transaction is already on chain
+                # But we won't place any new bets after this
+                return False, 0, [0, 0, 0]  # placeholder values
+            
             # Get game result
             result = self.contract_manager.get_game_result(game_id)
             if result:
@@ -139,8 +152,12 @@ class ApesWinBot:
                 
                 return won, balance_change, result['dice_results']
             
-            # Check every second
-            time.sleep(1)
+            # Break waiting into smaller intervals to check for stop signal more frequently
+            time.sleep(0.5)
+            
+        # If we get here, we timed out waiting for a result
+        logging.error(f"Timed out waiting for game result after {max_wait_time} seconds")
+        return False, 0, None
     
     def play_dice_game(self):
         """Execute dice game strategy"""
@@ -148,6 +165,11 @@ class ApesWinBot:
             # Get initial balance before bet
             initial_balance = self.contract_manager.get_banana_balance()
             
+            # Check stop signal again before proceeding
+            if hasattr(self, '_should_stop') and self._should_stop:
+                logging.info("🛑 Stop signal detected before bet calculation, halting transactions")
+                return None
+                
             # Initialize session data on first run
             if self.session_start_balance is None:
                 self.session_start_balance = initial_balance
@@ -221,17 +243,22 @@ class ApesWinBot:
             # Store the current bet amount for real-time tracking
             self.current_bet_amount = actual_bet
             
-            # Make the current bet amount immediately available to the dashboard API
-            # by updating the user_stats dictionary
-            if hasattr(self, '_user_id') and self._user_id in user_stats:
-                user_stats[self._user_id]['current_bet'] = self.format_bananas(self.current_bet_amount, decimal_places=2)
-                logging.info(f"Updated dashboard with current bet: {user_stats[self._user_id]['current_bet']} 🍌")
+            # Make the current bet amount available for the UI to read
+            # Instead of directly accessing user_stats (which is not available here),
+            # we'll just log and rely on app.py to read this value
+            logging.info(f"CURRENT_BET_SET: {self.format_bananas(self.current_bet_amount, decimal_places=2)} 🍌")
             
             logging.info(f"\n🎯 BET DETAILS")
             logging.info(f"   Base Amount:  {self.format_bananas(self.base_bet_amount):>10} 🍌")
             logging.info(f"   Final Amount: {self.format_bananas(self.current_bet_amount):>10} 🍌")
             logging.info(f"   Percentage:   {(self.current_bet_amount / initial_balance * 100):>9.1f}%")
             logging.info("="*50)
+            
+            # Final stop check before placing the actual blockchain transaction
+            if hasattr(self, '_should_stop') and self._should_stop:
+                logging.info("🛑 Stop signal detected just before blockchain transaction, cancelling bet")
+                return None
+                
             game_id = self.contract_manager.place_dice_bet(actual_bet)
             
             # If bet failed, return None to trigger delay

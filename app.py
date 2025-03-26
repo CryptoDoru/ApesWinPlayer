@@ -263,6 +263,10 @@ def bot_worker(user_id=None):
     # Get bot instance (initialize if needed)
     current_bot = get_bot(user_id=user_id)
     
+    # Store reference to user ID in bot for stopping checks
+    current_bot._user_id = user_id
+    current_bot._should_stop = False  # Initialize stop flag
+    
     # Get initial balances for session profit tracking
     raw_banana_balance = current_bot.contract_manager.get_banana_balance()
     formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
@@ -283,11 +287,47 @@ def bot_worker(user_id=None):
     
     logger.info(f"🚀 Bot starting for user {user_id[:8]}... with {formatted_banana_balance} 🍌 balance and {formatted_s_balance} S token balance...")
     
-    while user_id in user_running and user_running[user_id]:
+    while user_id in user_running and user_running[user_id] and not current_bot._should_stop:
         try:
+            # Check if we should stop before making a transaction
+            if not user_id in user_running or not user_running[user_id] or current_bot._should_stop:
+                logger.info(f"⛔️ Bot stopping before transaction for user {user_id[:8]}...")
+                break
+                
             # Get current bot instance
             current_bot = get_bot(user_id=user_id)
+            # Pass user_id to bot for reference
+            current_bot._user_id = user_id
+            # Make sure we pass the stop flag to the bot
+            current_bot._should_stop = not (user_id in user_running and user_running[user_id])
+            
+            # Only proceed with bet if we're still supposed to be running
+            if current_bot._should_stop:
+                logger.info(f"⛔️ Bot detected stop signal, halting transactions for user {user_id[:8]}...")
+                break
+                
+            # Create log capture handler to intercept specific log messages
+            class CurrentBetLogger(logging.Handler):
+                def emit(self, record):
+                    if "CURRENT_BET_SET:" in record.getMessage():
+                        try:
+                            # Extract the bet amount from the log message
+                            msg = record.getMessage()
+                            bet_amount = msg.split("CURRENT_BET_SET:")[1].split(" 🍌")[0].strip()
+                            user_stats[user_id]['current_bet'] = bet_amount
+                            logger.info(f"Updated dashboard with current bet: {bet_amount} 🍌")
+                        except Exception as e:
+                            logger.error(f"Error parsing bet amount: {e}")
+            
+            # Add the custom handler to root logger
+            bet_logger = CurrentBetLogger()
+            logging.getLogger().addHandler(bet_logger)
+            
+            # Execute the dice game
             result = current_bot.play_dice_game()
+            
+            # Remove the temporary logger to avoid memory leaks
+            logging.getLogger().removeHandler(bet_logger)
             
             # Get current banana balance
             raw_banana_balance = current_bot.contract_manager.get_banana_balance()
@@ -337,12 +377,36 @@ def bot_worker(user_id=None):
                 if len(user_stats[user_id]['recent_games']) > 10:
                     user_stats[user_id]['recent_games'].pop()
             
-            # Wait between games
-            time.sleep(3)
+            # Check if we should stop before waiting
+            if not user_id in user_running or not user_running[user_id] or current_bot._should_stop:
+                logger.info(f"⛔️ Bot stopping during wait cycle for user {user_id[:8]}...")
+                break
+                
+            # Wait between games with periodic stop checks
+            # Break the wait into smaller chunks so we can check for stop signals more frequently
+            for _ in range(6):  # 6 x 0.5s = 3s total wait time
+                if not user_id in user_running or not user_running[user_id] or current_bot._should_stop:
+                    logger.info(f"⛔️ Bot stopping during wait cycle for user {user_id[:8]}...")
+                    break
+                time.sleep(0.5)
             
         except Exception as e:
             logger.error(f"Error in bot thread for user {user_id[:8]}...: {e}")
-            time.sleep(5)  # Wait a bit before retrying
+            # Add a full traceback for better debugging
+            import traceback
+            logger.error(f"Detailed traceback:\n{traceback.format_exc()}")
+            
+            # Update user stats to show error
+            if user_id in user_stats:
+                user_stats[user_id]['status'] = 'error'
+                user_stats[user_id]['error'] = str(e)
+                
+            # Wait a bit before retrying, but check for stop signal first
+            for _ in range(10):  # 10 x 0.5s = 5s total wait time
+                if not user_id in user_running or not user_running[user_id] or current_bot._should_stop:
+                    logger.info(f"⛔️ Bot stopping during error recovery for user {user_id[:8]}...")
+                    break
+                time.sleep(0.5)
     
     logger.info(f"Bot stopped for user {user_id[:8]}...")
     # Clean up session resources when bot stops
@@ -454,7 +518,15 @@ def stop_bot():
     user_id = get_user_id()
     
     if user_id in user_running and user_running[user_id]:
+        logger.info(f"⛔️ Stopping bot for user {user_id[:8]}...")
+        # Set global flag to stop the bot worker thread
         user_running[user_id] = False
+        
+        # Also set the bot instance flag to ensure it stops mid-execution
+        if user_id in user_bots and user_bots[user_id] is not None:
+            user_bots[user_id]._should_stop = True
+            logger.info("Setting bot's internal stop flag to prevent new transactions")
+            
         return jsonify({'status': 'stopping'})
     
     return jsonify({'status': 'not_running'})
