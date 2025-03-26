@@ -15,21 +15,50 @@ logger = logging.getLogger('dashboard')
 
 app = Flask(__name__)
 
+# Enable CORS for Vercel serverless environment
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
+
+# Handle OPTIONS requests (for CORS preflight)
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    return '', 204
+
 # Global variables
-bot = ApesWinBot()
+bot = None  # Initialize lazily for serverless environment
 bot_thread = None
 bot_running = False
+
+# Function to get or create bot
+def get_bot(private_key=None):
+    global bot
+    if bot is None:
+        try:
+            bot = ApesWinBot(private_key)
+        except Exception as e:
+            logger.error(f"Error initializing bot: {e}")
+            # Create with minimum functionality
+            bot = ApesWinBot()
+    return bot
 
 # Function to fetch and update balances
 def update_balances():
     try:
+        # Get current bot instance or initialize it
+        current_bot = get_bot()
+        
         # Get banana balance
-        raw_banana_balance = bot.contract_manager.get_banana_balance()
-        formatted_banana_balance = bot.format_bananas(raw_banana_balance)
+        raw_banana_balance = current_bot.contract_manager.get_banana_balance()
+        formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
         
         # Get S token balance
-        raw_s_balance = bot.contract_manager.get_native_balance()
-        formatted_s_balance = bot.contract_manager.format_native(raw_s_balance)
+        raw_s_balance = current_bot.contract_manager.get_native_balance()
+        formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
         
         # Update stats with balances
         stats['current_balance'] = formatted_banana_balance
@@ -93,13 +122,16 @@ def bot_worker():
     stats['total_wins'] = 0
     stats['total_losses'] = 0
     
+    # Get bot instance (initialize if needed)
+    current_bot = get_bot()
+    
     # Get initial balances for session profit tracking
-    raw_banana_balance = bot.contract_manager.get_banana_balance()
-    formatted_banana_balance = bot.format_bananas(raw_banana_balance)
+    raw_banana_balance = current_bot.contract_manager.get_banana_balance()
+    formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
     
     # Get S token balance
-    raw_s_balance = bot.contract_manager.get_native_balance()
-    formatted_s_balance = bot.contract_manager.format_native(raw_s_balance)
+    raw_s_balance = current_bot.contract_manager.get_native_balance()
+    formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
     
     # Store both raw and formatted balances
     stats['start_balance'] = raw_banana_balance / 10**18 # Convert raw balance to decimal
@@ -111,24 +143,26 @@ def bot_worker():
     
     while bot_running:
         try:
-            result = bot.play_dice_game()
+            # Get current bot instance
+            current_bot = get_bot()
+            result = current_bot.play_dice_game()
             
             # Get current banana balance
-            raw_banana_balance = bot.contract_manager.get_banana_balance()
-            formatted_banana_balance = bot.format_bananas(raw_banana_balance)
+            raw_banana_balance = current_bot.contract_manager.get_banana_balance()
+            formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
             decimal_banana_balance = raw_banana_balance / 10**18
             
             # Get current S token balance
-            raw_s_balance = bot.contract_manager.get_native_balance()
-            formatted_s_balance = bot.contract_manager.format_native(raw_s_balance)
+            raw_s_balance = current_bot.contract_manager.get_native_balance()
+            formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
             
             # Update statistics with properly formatted balances
             stats['current_balance'] = formatted_banana_balance
             stats['s_token_balance'] = formatted_s_balance
-            stats['all_time_high'] = bot.format_bananas(bot.all_time_high)
-            stats['win_streak'] = bot.win_streak
-            stats['loss_streak'] = bot.loss_streak
-            stats['games_since_69'] = bot.games_since_69
+            stats['all_time_high'] = current_bot.format_bananas(current_bot.all_time_high)
+            stats['win_streak'] = current_bot.win_streak
+            stats['loss_streak'] = current_bot.loss_streak
+            stats['games_since_69'] = current_bot.games_since_69
             stats['last_update'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             # Calculate session profit using decimal balances for accuracy
@@ -191,7 +225,7 @@ def refresh_balances():
 
 @app.route('/api/set_private_key', methods=['POST'])
 def set_private_key():
-    global bot, stats
+    global stats
     try:
         data = request.json
         private_key = data.get('private_key')
@@ -199,9 +233,10 @@ def set_private_key():
         # Validate private key format
         if not private_key or not private_key.startswith('0x') or len(private_key) != 66:
             return jsonify({'status': 'error', 'message': 'Invalid private key format'}), 400
-            
-        # Update the bot with the new private key
-        wallet_address = bot.update_wallet(private_key)
+        
+        # Initialize or update the bot with the new private key
+        current_bot = get_bot(private_key)
+        wallet_address = current_bot.update_wallet(private_key)
         
         # Update balances
         update_balances()
@@ -260,12 +295,16 @@ def get_settings():
     }
     return jsonify(settings)
 
-# Create required directories
-os.makedirs('templates', exist_ok=True)
-os.makedirs('static', exist_ok=True)
+# Create directories if running locally
+try:
+    # This might fail in read-only Vercel environment, but we don't need it there
+    os.makedirs('templates', exist_ok=True)
+    os.makedirs('static', exist_ok=True)
+except Exception as e:
+    print(f"Note: Couldn't create directories, but this is normal in serverless: {e}")
 
-# For Vercel deployment
-app.debug = True  # Set to False in production
+# For Vercel deployment - serverless compatible mode
+app.debug = False  # Set to False in production
 
 if __name__ == '__main__':
     # Only run the app directly when running locally
