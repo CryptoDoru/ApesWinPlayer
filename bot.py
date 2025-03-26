@@ -90,21 +90,24 @@ class ApesWinBot:
             logging.error(f"Error updating wallet: {e}")
             raise ValueError(f"Failed to update wallet: {e}")
     
-    def format_bananas(self, amount):
-        """Convert wei amount to readable banana format
+    def format_bananas(self, amount, decimal_places=4):
+        """Convert wei amount to readable banana format with limited decimal places
         
         Args:
             amount: Amount in wei
+            decimal_places: Number of decimal places to show (default: 4)
             
         Returns:
-            float: Formatted amount in banana units
+            str: Formatted amount in banana units with fixed decimal places
         """
         try:
             # Convert to float first to ensure numeric value
-            return float(amount) / 1e18
+            value = float(amount) / 1e18
+            # Format to specified decimal places
+            return f"{value:.{decimal_places}f}"
         except (ValueError, TypeError):
             logging.error(f"Error formatting banana amount: {amount}")
-            return 0.0
+            return f"0.{'0' * decimal_places}"
         
     def wait_for_game_result(self, game_id: int, initial_balance: int) -> Tuple[bool, int, Optional[list]]:
         """Wait for game result and return outcome
@@ -205,8 +208,8 @@ class ApesWinBot:
                 games_over = self.games_since_69 - self.chase_69_threshold + 1
                 chase_bonus = min(self.chase_69_multiplier ** games_over, 3.0)  # Cap at 3x
                 logging.info(f"   69 Chase:     {chase_bonus:.2f}x 🌟")
-            
-            # Apply all multipliers to base bet amount
+                
+            # Calculate the actual current bet amount with all modifiers
             actual_bet = int(self.base_bet_amount * win_bonus * recovery * chase_bonus)
             
             # Cap the bet at max percentage
@@ -215,10 +218,19 @@ class ApesWinBot:
                 logging.info(f"   ⚠️ Bet capped at {self.max_bet_percentage*100}% of balance")
                 actual_bet = max_allowed_bet
             
+            # Store the current bet amount for real-time tracking
+            self.current_bet_amount = actual_bet
+            
+            # Make the current bet amount immediately available to the dashboard API
+            # by updating the user_stats dictionary
+            if hasattr(self, '_user_id') and self._user_id in user_stats:
+                user_stats[self._user_id]['current_bet'] = self.format_bananas(self.current_bet_amount, decimal_places=2)
+                logging.info(f"Updated dashboard with current bet: {user_stats[self._user_id]['current_bet']} 🍌")
+            
             logging.info(f"\n🎯 BET DETAILS")
             logging.info(f"   Base Amount:  {self.format_bananas(self.base_bet_amount):>10} 🍌")
-            logging.info(f"   Final Amount: {self.format_bananas(actual_bet):>10} 🍌")
-            logging.info(f"   Percentage:   {(actual_bet / initial_balance * 100):>9.1f}%")
+            logging.info(f"   Final Amount: {self.format_bananas(self.current_bet_amount):>10} 🍌")
+            logging.info(f"   Percentage:   {(self.current_bet_amount / initial_balance * 100):>9.1f}%")
             logging.info("="*50)
             game_id = self.contract_manager.place_dice_bet(actual_bet)
             
@@ -320,7 +332,8 @@ class ApesWinBot:
                 'game_id': game_id,
                 'dice': dice_result,
                 'won': balance_change > 0,
-                'bet_amount': self.format_bananas(self.base_bet_amount),
+                'bet_amount': self.format_bananas(self.current_bet_amount or self.base_bet_amount),
+                'current_bet': self.format_bananas(self.current_bet_amount or self.base_bet_amount, decimal_places=2),
                 'balance_change': self.format_bananas(abs(balance_change)),
                 'is_69': is_69_win if 'is_69_win' in locals() else False
             }

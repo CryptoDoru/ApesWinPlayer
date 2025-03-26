@@ -49,6 +49,34 @@
                 </div>
             </div>
             <div class="stats-section">
+                <!-- Game Status Indicator -->
+                <div class="card game-status-card">
+                    <div class="card-header">
+                        <h3>Game Status</h3>
+                        <div id="bot-status" class="status-indicator offline">OFFLINE</div>
+                    </div>
+                    <div id="current-bet-container" class="current-bet-container" style="display: none;">
+                        <div class="bet-animation">
+                            <div class="dice-animation">
+                                <i class="fas fa-dice-one"></i>
+                                <i class="fas fa-dice-two"></i>
+                                <i class="fas fa-dice-three"></i>
+                            </div>
+                            <div id="bet-status">Waiting for next bet...</div>
+                        </div>
+                        <div class="bet-details">
+                            <div>
+                                <span class="bet-label">Current Bet:</span>
+                                <span id="current-bet-amount" class="bet-value">0.00 🍌</span>
+                            </div>
+                            <div>
+                                <span class="bet-label">Last Result:</span>
+                                <span id="last-bet-result" class="bet-value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card balance-card">
                     <div class="card-header">
                         <h3>Balance</h3>

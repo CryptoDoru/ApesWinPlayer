@@ -7,6 +7,13 @@ const autoScrollBtn = document.getElementById('autoScrollBtn');
 const logMessages = document.getElementById('logMessages');
 const recentGames = document.getElementById('recentGames');
 
+// Game status elements
+const botStatus = document.getElementById('bot-status');
+const currentBetContainer = document.getElementById('current-bet-container');
+const betStatus = document.getElementById('bet-status');
+const currentBetAmount = document.getElementById('current-bet-amount');
+const lastBetResult = document.getElementById('last-bet-result');
+
 // Wallet elements
 const privateKeyInput = document.getElementById('privateKeyInput');
 const connectWalletBtn = document.getElementById('connectWalletBtn');
@@ -43,6 +50,7 @@ const chaseMultiplier = document.getElementById('chaseMultiplier');
 // State
 let autoScroll = true;
 let botRunning = false;
+let currentlyBetting = false;
 
 // Stats state to prevent flashing/glitching
 let currentStats = {
@@ -58,7 +66,9 @@ let currentStats = {
     last_update: '',
     all_time_high: '0.00',
     log_messages: [],
-    recent_games: []
+    recent_games: [],
+    current_bet: '0.00',
+    last_result: '--'
 };
 
 // Functions
@@ -72,7 +82,7 @@ function updateStats() {
             // Cache stats to prevent UI glitches
             currentStats = {...currentStats, ...data};
             
-            // Update balances with icons
+            // Update balances with icons (ensuring we have consistent decimal places)
             currentBalance.textContent = `${currentStats.current_balance} 🍌`;
             sTokenBalance.textContent = `${currentStats.s_token_balance} S`;
             
@@ -99,6 +109,27 @@ function updateStats() {
             
             lastUpdate.textContent = currentStats.last_update || 'Never';
             allTimeHigh.textContent = currentStats.all_time_high;
+            
+            // Update betting information if available
+            if (data.current_bet && botRunning) {
+                currentBetAmount.textContent = `${data.current_bet} 🍌`;
+                currentStats.current_bet = data.current_bet;
+                
+                // Make sure the bet container is visible when bot is running
+                currentBetContainer.style.display = 'flex';
+            }
+            
+            // Update game status indicator
+            updateGameStatus();
+            
+            // Extract last bet result from recent games if available
+            if (data.recent_games && data.recent_games.length > 0) {
+                const lastGame = data.recent_games[0];
+                const result = lastGame.won ? 'WIN' : 'LOSS';
+                lastBetResult.textContent = result;
+                lastBetResult.className = 'bet-value ' + (lastGame.won ? 'win-result' : 'loss-result');
+                currentStats.last_result = result;
+            }
             
             // Update log messages
             updateLogs(currentStats.log_messages);
@@ -161,10 +192,201 @@ function updateLogs(messages) {
     }
 }
 
+// Function to update game status indicator and betting animation
+function updateGameStatus() {
+    // If bot is not running, status is already set by start/stop functions
+    if (!botRunning) return;
+    
+    // Check logs for betting activity - get the most recent logs
+    const recentLogs = (currentStats.log_messages || []).slice(-15);
+    
+    // Direct extraction of current bet amount from logs
+    const betDetailsLog = recentLogs.find(log => {
+        const text = log.message || '';
+        return text.includes('Final Amount:');
+    });
+    
+    if (betDetailsLog) {
+        const text = betDetailsLog.message || '';
+        const matches = text.match(/Final Amount:\s+([\d\.]+)\s+🍌/);
+        if (matches && matches[1]) {
+            // Extract the bet amount and update UI immediately
+            const betAmount = matches[1];
+            currentBetAmount.textContent = `${betAmount} 🍌`;
+            currentStats.current_bet = betAmount;
+            currentBetContainer.style.display = 'flex';
+            console.log('Extracted bet amount from logs:', betAmount);
+        }
+    }
+    
+    // Variables to track game state
+    let isPlacingBet = false;
+    let isWaitingForResult = false;
+    let hasResult = false;
+    let isCalculatingNextBet = false;
+    let resultWin = false;
+    
+    // Scan for specific game state indicators
+    for (const log of recentLogs) {
+        const text = log.message || '';
+        
+        // Check for bet placement indicators
+        if (text.includes('🎲 PLACING BET 🎲') || 
+            text.includes('BET DETAILS') || 
+            text.includes('Base Amount:') || 
+            text.includes('Final Amount:')) {
+            isPlacingBet = true;
+        }
+        
+        // Check for waiting indicators
+        if (text.includes('Transaction Success') || 
+            text.includes('Waiting for game result') || 
+            text.includes('Gas Info') || 
+            text.includes('Game in progress')) {
+            isWaitingForResult = true;
+        }
+        
+        // Check for result indicators
+        if (text.includes('RESULT:')) {
+            hasResult = true;
+            resultWin = text.includes('WON');
+        }
+        
+        // More specific win/loss detection
+        if (text.includes('WON')) {
+            hasResult = true;
+            resultWin = true;
+        }
+        
+        if (text.includes('LOST')) {
+            hasResult = true;
+            resultWin = false;
+        }
+        
+        // Check for next bet calculation
+        if (text.includes('NEXT BET:')) {
+            isCalculatingNextBet = true;
+        }
+    }
+    
+    // Always show the bet container when bot is running
+    if (botRunning) {
+        currentBetContainer.style.display = 'flex';
+    }
+    
+    // Update UI based on current game state - prioritized by sequence
+    if (isPlacingBet && !hasResult) {
+        console.log('Status: PLACING BET');
+        botStatus.textContent = 'BETTING';
+        botStatus.className = 'status-indicator betting';
+        betStatus.textContent = 'Placing bet...';
+        currentlyBetting = true;
+        
+        // Force a refresh of current bet
+        fetchCurrentBet();
+    } 
+    else if (isWaitingForResult && !hasResult) {
+        console.log('Status: WAITING FOR RESULT');
+        botStatus.textContent = 'WAITING';
+        botStatus.className = 'status-indicator betting';
+        betStatus.textContent = 'Waiting for game result...';
+        currentlyBetting = true;
+    } 
+    else if (hasResult) {
+        console.log('Status: GAME RESULT - ' + (resultWin ? 'WIN' : 'LOSS'));
+        botStatus.textContent = resultWin ? 'WIN' : 'LOSS';
+        botStatus.className = `status-indicator ${resultWin ? 'win' : 'loss'}`;
+        betStatus.textContent = `Game complete - ${resultWin ? 'Won!' : 'Lost'}`;
+        
+        // Update last result display
+        lastBetResult.textContent = resultWin ? 'WIN' : 'LOSS';
+        lastBetResult.className = resultWin ? 'win-result' : 'loss-result';
+    } 
+    else if (isCalculatingNextBet) {
+        console.log('Status: CALCULATING NEXT BET');
+        botStatus.textContent = 'PLANNING';
+        botStatus.className = 'status-indicator online';
+        betStatus.textContent = 'Calculating next bet...';
+    } 
+    else if (botRunning) {
+        console.log('Status: WAITING FOR NEXT BET');
+        botStatus.textContent = 'ONLINE';
+        botStatus.className = 'status-indicator online';
+        betStatus.textContent = 'Waiting for next bet...';
+        currentlyBetting = false;
+    }
+}
+
+// Function to specifically fetch current bet information in real-time
+function fetchCurrentBet() {
+    if (!botRunning) return;
+    
+    console.log('Fetching current bet amount...');
+    
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Received stats data:', data);
+            
+            if (data && data.current_bet) {
+                console.log('Current bet found:', data.current_bet);
+                
+                // Update only the bet amount in the UI
+                currentBetAmount.textContent = `${data.current_bet} 🍌`;
+                currentStats.current_bet = data.current_bet;
+                
+                // Make sure bet container is visible
+                currentBetContainer.style.display = 'flex';
+            } else {
+                console.log('No current bet found in data');
+                
+                // Try to extract from logs as fallback
+                if (data && data.log_messages && data.log_messages.length > 0) {
+                    const logs = data.log_messages;
+                    
+                    // Look for "Final Amount:" log entry
+                    const betLog = logs.find(log => {
+                        return (log.message || '').includes('Final Amount:');
+                    });
+                    
+                    if (betLog) {
+                        const text = betLog.message || '';
+                        const matches = text.match(/Final Amount:\s+([\d\.]+)\s+🍌/);
+                        if (matches && matches[1]) {
+                            console.log('Extracted bet from logs:', matches[1]);
+                            currentBetAmount.textContent = `${matches[1]} 🍌`;
+                            currentStats.current_bet = matches[1];
+                            currentBetContainer.style.display = 'flex';
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching current bet:', error);
+        });
+}
+
 function updateRecentGames(games) {
     if (!games || games.length === 0) {
         recentGames.innerHTML = '<div class="loading-message">No games played yet</div>';
         return;
+    }
+    
+    // Update the last bet result if we have games
+    if (games.length > 0) {
+        const lastGame = games[0];
+        
+        // Format the outcome for display
+        let resultDisplay = lastGame.win ? '<span class="win-result">WIN</span>' : '<span class="loss-result">LOSS</span>';
+        
+        // Special styling for 69 pattern
+        if (lastGame.has_pattern) {
+            resultDisplay = '<span class="pattern-result">69 WIN</span>';
+        }
+        
+        // Update the last bet result display
+        lastBetResult.innerHTML = resultDisplay;
     }
     
     recentGames.innerHTML = '';
@@ -274,6 +496,26 @@ startBtn.addEventListener('click', () => {
                 botRunning = true;
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
+                
+                // Update the bot status to online
+                botStatus.textContent = 'ONLINE';
+                botStatus.className = 'status-indicator online';
+                
+                // Show the betting container
+                currentBetContainer.style.display = 'flex';
+                
+                // Immediately fetch fresh stats to get current bet amount
+                setTimeout(() => {
+                    fetch('/api/stats')
+                        .then(response => response.json())
+                        .then(statsData => {
+                            if (statsData.current_bet) {
+                                currentBetAmount.textContent = `${statsData.current_bet} 🍌`;
+                                currentStats.current_bet = statsData.current_bet;
+                            }
+                        })
+                        .catch(err => console.error('Error fetching initial bet data:', err));
+                }, 500); // Small delay to allow server to update
             }
         })
         .catch(error => console.error('Error starting bot:', error));
@@ -287,6 +529,14 @@ stopBtn.addEventListener('click', () => {
                 botRunning = false;
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
+                
+                // Update the bot status to offline
+                botStatus.textContent = 'OFFLINE';
+                botStatus.className = 'status-indicator offline';
+                
+                // Hide the betting container
+                currentBetContainer.style.display = 'none';
+                currentlyBetting = false;
             }
         })
         .catch(error => console.error('Error stopping bot:', error));
@@ -524,6 +774,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check for stored wallet
     checkStoredWallet();
     
+    // Initialize game status indicators
+    botStatus.textContent = 'OFFLINE';
+    botStatus.className = 'status-indicator offline';
+    currentBetContainer.style.display = 'none';
+    
     // Set up polling for updates
-    setInterval(updateStats, 1000);
+    setInterval(() => {
+        updateStats();
+        
+        // If bot is actively betting, fetch current bet info more frequently
+        if (botRunning && currentlyBetting) {
+            fetchCurrentBet();
+        }
+    }, 1000);
+    
+    // Very frequent update for game status to catch bet placement immediately
+    setInterval(() => {
+        if (botRunning) {
+            fetchLogs();
+            updateGameStatus();
+        }
+    }, 500);
+    
+    // Debug help - log status every few seconds when running
+    setInterval(() => {
+        if (botRunning && currentBetContainer.style.display === 'flex') {
+            console.log('Current bet display active, showing: ' + currentBetAmount.textContent);
+        }
+    }, 5000);
 });
+
+// No duplicate declaration needed as it's already defined at line 52

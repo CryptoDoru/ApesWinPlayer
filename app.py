@@ -137,14 +137,8 @@ def update_balances(user_id=None):
         try:
             # Get banana balance with error handling
             raw_banana_balance = current_bot.contract_manager.get_banana_balance()
-            formatted_banana_balance = current_bot.format_bananas(raw_banana_balance)
-            # Make sure we have a float before formatting
-            if isinstance(formatted_banana_balance, str):
-                try:
-                    formatted_banana_balance = float(formatted_banana_balance)
-                except ValueError:
-                    formatted_banana_balance = 0.0
-            formatted_banana_balance = f"{formatted_banana_balance:.2f}"
+            # Use the improved format_bananas method with 2 decimal places for dashboard display
+            formatted_banana_balance = current_bot.format_bananas(raw_banana_balance, decimal_places=2)
         except Exception as e:
             logger.error(f"Error getting banana balance: {e}")
             formatted_banana_balance = user_stats[user_id].get('current_balance', "0.00")
@@ -152,12 +146,38 @@ def update_balances(user_id=None):
         try:
             # Get S token balance with error handling
             raw_s_balance = current_bot.contract_manager.get_native_balance()
-            formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
-            formatted_s_balance = f"{formatted_s_balance:.2f}"
+            
+            # Use the contract manager's format_native method to correctly format S token balance
+            if isinstance(raw_s_balance, (int, float)):
+                s_token_value = current_bot.contract_manager.format_native(raw_s_balance)
+                formatted_s_balance = f"{s_token_value:.2f}"  # Limit S token to 2 decimal places
+            else:
+                formatted_s_balance = "0.00"
         except Exception as e:
             logger.error(f"Error getting S token balance: {e}")
             formatted_s_balance = user_stats[user_id].get('s_token_balance', "0.00")
         
+        # Add current bet amount if the bot is running
+        # First check for current_bet_amount (actual bet with modifiers), then fallback to base_bet_amount
+        if hasattr(current_bot, 'current_bet_amount') and current_bot.current_bet_amount is not None:
+            try:
+                # Format the actual current bet amount with limited decimal places
+                current_bet = current_bot.format_bananas(current_bot.current_bet_amount, decimal_places=2)
+                user_stats[user_id]['current_bet'] = current_bet
+            except Exception as e:
+                logger.error(f"Error getting current bet: {e}")
+                user_stats[user_id]['current_bet'] = "0.00"
+        elif hasattr(current_bot, 'base_bet_amount') and current_bot.base_bet_amount is not None:
+            try:
+                # Fall back to base bet amount if actual bet isn't set yet
+                current_bet = current_bot.format_bananas(current_bot.base_bet_amount, decimal_places=2)
+                user_stats[user_id]['current_bet'] = current_bet
+            except Exception as e:
+                logger.error(f"Error getting base bet: {e}")
+                user_stats[user_id]['current_bet'] = "0.00"
+        else:
+            user_stats[user_id]['current_bet'] = "0.00"
+            
         # Update user-specific stats with balances
         user_stats[user_id]['current_balance'] = formatted_banana_balance
         user_stats[user_id]['s_token_balance'] = formatted_s_balance
@@ -249,7 +269,7 @@ def bot_worker(user_id=None):
     
     # Get S token balance
     raw_s_balance = current_bot.contract_manager.get_native_balance()
-    formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
+    formatted_s_balance = f"{current_bot.contract_manager.format_native(raw_s_balance):.2f}"  # Limit to 2 decimal places
     
     # Store both raw and formatted balances
     decimal_balance = raw_banana_balance / 10**18 # Convert raw balance to decimal
@@ -276,7 +296,7 @@ def bot_worker(user_id=None):
             
             # Get current S token balance
             raw_s_balance = current_bot.contract_manager.get_native_balance()
-            formatted_s_balance = current_bot.contract_manager.format_native(raw_s_balance)
+            formatted_s_balance = f"{current_bot.contract_manager.format_native(raw_s_balance):.2f}"  # Limit to 2 decimal places
             
             # Update statistics with properly formatted balances
             user_stats[user_id]['current_balance'] = formatted_banana_balance
