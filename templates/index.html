@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApesWin Dice Bot Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <div class="logo">
+                <i class="fas fa-dice"></i>
+                <h1>ApesWin Dice Bot</h1>
+            </div>
+            <div class="controls">
+                <button id="startBtn" class="btn btn-primary"><i class="fas fa-play"></i> Start Bot</button>
+                <button id="stopBtn" class="btn btn-danger" disabled><i class="fas fa-stop"></i> Stop Bot</button>
+                <button id="resetStatsBtn" class="btn btn-warning"><i class="fas fa-redo"></i> Reset Stats</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="wallet-section">
+                <div class="card wallet-card">
+                    <div class="card-header">
+                        <h3>Wallet Connection</h3>
+                    </div>
+                    <div class="wallet-content">
+                        <div id="wallet-disconnected-view">
+                            <p>Enter your private key to connect your wallet and use the bot</p>
+                            <div class="private-key-input">
+                                <input type="password" id="privateKeyInput" placeholder="Enter your private key (0x...)" />
+                                <button id="connectWalletBtn" class="btn btn-primary">Connect Wallet</button>
+                            </div>
+                            <div class="wallet-warning">
+                                <i class="fas fa-shield-alt"></i> Your private key is never stored or sent to any server
+                            </div>
+                        </div>
+                        <div id="wallet-connected-view" style="display: none;">
+                            <div class="wallet-address">
+                                <span>Connected:</span>
+                                <code id="connected-address">0x...</code>
+                                <button id="disconnectWalletBtn" class="btn btn-sm btn-danger">Disconnect</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-section">
+                <div class="card balance-card">
+                    <div class="card-header">
+                        <h3>Balance</h3>
+                        <button id="refreshBalanceBtn" class="btn btn-sm btn-primary" title="Refresh balances">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="balance-container">
+                        <div class="balance-item">
+                            <div class="stat-value" id="currentBalance">Loading...</div>
+                            <div class="stat-subtitle">🍌 Banana Balance</div>
+                        </div>
+                        <div class="balance-item">
+                            <div class="stat-value" id="sTokenBalance">Loading...</div>
+                            <div class="stat-subtitle">S Token Balance</div>
+                        </div>
+                    </div>
+                    <div class="profit-container">
+                        <span class="profit-label">Session Profit:</span>
+                        <span class="stat-value" id="sessionProfit">0</span>
+                    </div>
+                </div>
+                <div class="card streak-card">
+                    <h3>Streaks</h3>
+                    <div class="streak-stats">
+                        <div>
+                            <span class="streak-label">Win Streak:</span>
+                            <span class="stat-value" id="winStreak">0</span>
+                        </div>
+                        <div>
+                            <span class="streak-label">Loss Streak:</span>
+                            <span class="stat-value" id="lossStreak">0</span>
+                        </div>
+                        <div>
+                            <span class="streak-label">69 Drought:</span>
+                            <span class="stat-value" id="gamesSince69">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card performance-card">
+                    <h3>Performance</h3>
+                    <div class="performance-stats">
+                        <div>
+                            <span class="performance-label">Total Games:</span>
+                            <span class="stat-value" id="totalGames">0</span>
+                        </div>
+                        <div>
+                            <span class="performance-label">Wins:</span>
+                            <span class="stat-value" id="totalWins">0</span>
+                        </div>
+                        <div>
+                            <span class="performance-label">Losses:</span>
+                            <span class="stat-value" id="totalLosses">0</span>
+                        </div>
+                        <div>
+                            <span class="performance-label">Win Rate:</span>
+                            <span class="stat-value" id="winRate">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card settings-card">
+                    <h3>Bot Settings</h3>
+                    <div class="settings">
+                        <div>
+                            <span class="settings-label">Min Bet:</span>
+                            <span class="settings-value" id="minBet">15%</span>
+                        </div>
+                        <div>
+                            <span class="settings-label">Max Bet:</span>
+                            <span class="settings-value" id="maxBet">30%</span>
+                        </div>
+                        <div>
+                            <span class="settings-label">Loss Recovery:</span>
+                            <span class="settings-value" id="lossRecovery">20%</span>
+                        </div>
+                        <div>
+                            <span class="settings-label">69 Threshold:</span>
+                            <span class="settings-value" id="chaseThreshold">10</span>
+                        </div>
+                        <div>
+                            <span class="settings-label">69 Multiplier:</span>
+                            <span class="settings-value" id="chaseMultiplier">1.1x</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-activity">
+                <div class="card recent-games">
+                    <h3>Recent Games</h3>
+                    <div class="game-list" id="recentGames">
+                        <div class="loading-message">Loading recent games...</div>
+                    </div>
+                </div>
+
+                <div class="card log-card">
+                    <h3>Bot Logs</h3>
+                    <div class="log-container">
+                        <div class="log-controls">
+                            <button id="clearLogsBtn" class="btn btn-sm"><i class="fas fa-trash"></i> Clear</button>
+                            <button id="autoScrollBtn" class="btn btn-sm btn-active"><i class="fas fa-scroll"></i> Auto-scroll</button>
+                        </div>
+                        <div class="log-messages" id="logMessages">
+                            <div class="log-entry">
+                                <span class="log-time">00:00:00</span>
+                                <span class="log-level info">INFO</span>
+                                <span class="log-text">Waiting for bot to start...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Last Update: <span id="lastUpdate">Never</span></p>
+            <p>All Time High: <span id="allTimeHigh">0</span></p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

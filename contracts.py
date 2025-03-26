@@ -12,12 +12,16 @@ import logging
 load_dotenv()
 
 class ContractManager:
-    def __init__(self):
+    def __init__(self, private_key=None):
         self.web3 = ContractConfig.get_web3()
-        private_key = os.getenv("PRIVATE_KEY")
+        
+        # Use provided private key or get from environment variables
         if not private_key:
-            raise ValueError("PRIVATE_KEY not found in environment variables")
+            private_key = os.getenv("PRIVATE_KEY")
+            if not private_key:
+                raise ValueError("PRIVATE_KEY not found in environment variables or provided as argument")
             
+        # Initialize account with private key
         self.account: LocalAccount = Account.from_key(private_key)
         
         # Initialize contract (combined dice game and token contract)
@@ -28,6 +32,14 @@ class ContractManager:
         
         # Track current game ID
         self.current_game_id = None
+        
+    def update_private_key(self, private_key):
+        """Update the account with a new private key"""
+        if not private_key:
+            raise ValueError("Private key cannot be empty")
+            
+        self.account = Account.from_key(private_key)
+        return self.account.address
     
     def get_native_balance(self) -> int:
         """Get native token (S) balance"""
@@ -111,21 +123,16 @@ class ContractManager:
             Optional[Dict]: Game result info or None if not found/fulfilled
         """
         try:
-            # Get all unfulfilled games first
-            game_states = self.contract.functions.getGameState().call()
-            # Check if our game is in unfulfilled list
-            for state in game_states:
-                if state[0] == game_id:
-                    # Game is still unfulfilled
-                    return None
-            
-            # Game not in unfulfilled list, get details from last game info
+            # Get game info directly
             game_info = self.contract.functions.getUserLastGameInfo(self.account.address).call()
             if game_info[0] != game_id:
                 # Not our game
                 return None
                 
             round_info = game_info[1]
+            if not round_info[0]:  # not fulfilled
+                return None
+                
             return {
                 'fulfilled': round_info[0],  # fulfilled
                 'user': round_info[1],       # user address
@@ -175,28 +182,17 @@ class ContractManager:
         bet_per_dice = bet_amount // 3  # Split bet evenly across dice
         bet_amounts = [bet_per_dice] * 3
         
-        # Get current gas price
-        gas_price = self.web3.eth.gas_price
+        # Optimized transaction parameters from Apes.Win interface
+        gas_price = 55000000000  # 55 Gwei (from example transaction)
+        gas_limit = 300000  # Keep our current limit, it's already lower than example
         
-        # Calculate the minimum required value to send based on contract requirements
-        gas_price = 55010000000  # 55.01 Gwei as in tx
-        callback_gas = 200000  # From contract: CALLBACK_GAS = 200_000
-        
-        # Calculate minimum send value: tx.gasprice * CALLBACK_GAS
-        # Add a small buffer (5%) to ensure the transaction doesn't fail
-        minimum_send = int(gas_price * callback_gas * 1.05)  # with 5% buffer
-        tx_value = minimum_send  # Use the minimum required value
-        
-        # We need to provide enough gas limit for the transaction to succeed
-        # From testing, we know transactions are failing with gas limit = 190,000
-        # Let's use a value closer to what's actually needed, based on transaction history
-        tx_gas_limit = 300000  # Still lower than original but enough to succeed
+        # Calculate optimal value to send (from example transaction)
+        tx_value = 19250000000000000  # 0.01925 S (from example transaction)
         
         logging.info(f"\n📈 Gas Info:")
         logging.info(f"   Gas Price: {gas_price} wei ({gas_price / 1e9:.2f} gwei)")
         logging.info(f"   Value to Send: {self.format_native(tx_value):.10f} S")
-        logging.info(f"   Required Min: {self.format_native(gas_price * callback_gas):.10f} S")
-        logging.info(f"   Gas Limit: {tx_gas_limit:,}")
+        logging.info(f"   Gas Limit: {gas_limit:,}")
         
         # Check if we have enough balance for the bet
         if not self.check_bet_amount(bet_amount):
@@ -214,21 +210,15 @@ class ContractManager:
             # This matches the function signature in the ABI: bet(uint256[])
             transaction = self.contract.functions.bet(bet_amounts)
             
-            # Estimate gas but don't use the estimate directly
-            # Instead use our optimized gas limit which is lower but still safe
-            transaction.estimate_gas({
-                'from': self.account.address,
-                'value': tx_value  # Minimum required value
-            })
-            
-            # Use optimized gas limit
-            gas_limit = tx_gas_limit
+            # Use optimized gas parameters from Apes.Win interface
+            gas_price = 55000000000  # 55 Gwei 
+            gas_limit = 300000  # Fixed gas limit
             
             # Build transaction with the contract function
             signed_txn = transaction.build_transaction({
                 'from': self.account.address,
-                'value': tx_value,  # Minimum required value
-                'gas': gas_limit,
+                'value': tx_value,
+                'gas': 300000,  # Fixed gas limit
                 'gasPrice': gas_price,
                 'nonce': nonce,
                 'chainId': ContractConfig.CHAIN_ID
@@ -259,8 +249,9 @@ class ContractManager:
             
             # Calculate cost savings compared to original settings
             old_gas_limit = 412583  # Original gas limit
-            old_value = 13750000166650000  # Original value (0.0137500016665 S)
-            old_cost = (old_gas_limit * gas_price) + old_value
+            old_gas_price = 55000000000  # Original gas price (55 Gwei)
+            old_value = 24750000000000000  # Original value (0.02475 S)
+            old_cost = (old_gas_limit * old_gas_price) + old_value
             new_cost = actual_tx_fee + value_sent
             savings = self.format_native(old_cost - new_cost)
             
@@ -287,15 +278,16 @@ class ContractManager:
     def build_and_send_tx(self, contract_tx, value: int = 0) -> Dict:
         """Helper to build and send a transaction"""
         try:
-            # Get current gas price
-            gas_price = self.web3.eth.gas_price
+            # Use optimized gas price from Apes.Win interface
+            gas_price = 55000000000  # 55 Gwei
             
-            # Build transaction
+            # Build transaction with Season 2 parameters
             tx = contract_tx.buildTransaction({
                 'from': self.account.address,
                 'chainId': ContractConfig.CHAIN_ID,
                 'nonce': self.web3.eth.get_transaction_count(self.account.address),
                 'gasPrice': gas_price,
+                'gas': 300000,  # Fixed gas limit from successful tx
                 'value': value
             })
             

@@ -4,8 +4,8 @@ from web3 import Web3
 class ContractConfig:
     SONIC_RPC_URL = "https://rpc.soniclabs.com"
     
-    # Contract Address - This is a combined contract that handles both dice game and token functionality
-    CONTRACT_ADDRESS = "0xe7A965c863B1139Ff59cDE0cF42089A604C81013"
+    # Contract Address - Season 2 Dice Game Contract
+    CONTRACT_ADDRESS = "0x40A94AB8Aac840Be65B22Ac857A78ac56447db5f"
     DICE_GAME_ADDRESS = CONTRACT_ADDRESS
     BANANA_TOKEN_ADDRESS = CONTRACT_ADDRESS
     CHAIN_ID = 146

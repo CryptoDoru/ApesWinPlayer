@@ -1,0 +1,537 @@
+/* General Styles */
+:root {
+    --primary-color: #4a4af4;
+    --secondary-color: #e4a525;
+    --background-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logo i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-right: 10px;
+}
+
+.logo h1 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.controls button {
+    margin-left: 10px;
+}
+
+/* Button Styles */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn i {
+    margin-right: 5px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #3434d6;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-warning {
+    background-color: var(--warning-color);
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+.btn-active {
+    background-color: #28a745;
+    color: white;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Main Content Layout */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+/* Card Styles */
+.card {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.card h3 {
+    margin-bottom: 0;
+    color: var(--primary-color);
+}
+
+/* Stats Section */
+.stats-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.balance-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.balance-item {
+    flex: 1;
+    padding: 5px;
+}
+
+.balance-card .stat-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+#sTokenBalance {
+    color: var(--secondary-color);
+}
+
+.stat-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.streak-stats, .performance-stats, .settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.streak-label, .performance-label, .settings-label {
+    font-weight: 500;
+    margin-right: 5px;
+}
+
+.stat-value {
+    font-weight: bold;
+}
+
+/* Wallet Section */
+.wallet-section {
+    grid-column: 1 / -1; /* Make it span the full width */
+    margin-bottom: 20px;
+}
+
+.wallet-card {
+    width: 100%;
+}
+
+.wallet-content {
+    padding: 10px 0;
+}
+
+.private-key-input {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.private-key-input input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: monospace;
+}
+
+.wallet-warning {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.wallet-warning i {
+    color: var(--warning-color);
+}
+
+.wallet-address {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wallet-address code {
+    background: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Game Activity */
+.game-activity {
+    display: flex;
+    flex-direction: column;
+}
+
+.game-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.game-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+}
+
+.game-item:hover {
+    background-color: #f9f9f9;
+}
+
+.game-item:last-child {
+    border-bottom: none;
+}
+
+/* Special styling for 69 pattern games */
+.pattern-69 {
+    background-color: rgba(255, 215, 0, 0.1);
+    border-left: 3px solid gold;
+}
+
+.pattern-69:hover {
+    background-color: rgba(255, 215, 0, 0.2);
+}
+
+.game-left {
+    display: flex;
+    align-items: center;
+}
+
+.game-time {
+    font-size: 0.8rem;
+    color: #666;
+    margin-right: 10px;
+    min-width: 60px;
+}
+
+.game-id {
+    font-size: 0.8rem;
+    color: #666;
+    margin-right: 10px;
+}
+
+.dice-result {
+    display: flex;
+    gap: 5px;
+}
+
+.dice {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+    font-weight: bold;
+    color: white;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+
+/* Dice colors for different values */
+.dice-1 {
+    background-color: #dc3545;
+}
+
+.dice-2 {
+    background-color: #fd7e14;
+}
+
+.dice-3 {
+    background-color: #ffc107;
+}
+
+.dice-4 {
+    background-color: #28a745;
+}
+
+.dice-5 {
+    background-color: #17a2b8;
+}
+
+.dice-6 {
+    background-color: #6610f2;
+}
+
+.game-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-amount {
+    font-weight: 500;
+    min-width: 80px;
+}
+
+/* Balance change styling */
+.balance-change {
+    font-weight: 600;
+    min-width: 70px;
+}
+
+.balance-change.positive {
+    color: var(--success-color);
+}
+
+.balance-change.negative {
+    color: var(--danger-color);
+}
+
+/* Session profit styling */
+.profit-container {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.profit-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.game-result {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.win {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: var(--success-color);
+}
+
+.loss {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: var(--danger-color);
+}
+
+/* Special 69 pattern styling */
+.pattern-result {
+    position: relative;
+    overflow: hidden;
+}
+
+.pattern-result.win {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.2) 0%, rgba(255, 215, 0, 0.4) 100%);
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(255, 215, 0, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+    }
+}
+
+/* Log Styles */
+.log-container {
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+}
+
+.log-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 5px;
+    gap: 5px;
+}
+
+.log-messages {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #222;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+}
+
+.log-entry {
+    margin-bottom: 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.log-time {
+    color: #888;
+    margin-right: 8px;
+}
+
+.log-level {
+    display: inline-block;
+    width: 60px;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.log-level.info {
+    color: #5bc0de;
+}
+
+.log-level.warning {
+    color: #f0ad4e;
+}
+
+.log-level.error {
+    color: #d9534f;
+}
+
+.log-text {
+    color: #ddd;
+}
+
+/* Footer */
+footer {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Special Pattern Styles */
+.pattern-69 {
+    background-color: gold !important;
+    color: black !important;
+    font-weight: bold;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 900px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .controls {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .controls button {
+        margin: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .streak-stats, .performance-stats, .settings {
+        grid-template-columns: 1fr;
+    }
+}
