@@ -721,8 +721,11 @@ footer {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    background-color: #f8f9fa;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-top: none;
     border-radius: 0 0 8px 8px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .bet-animation {
@@ -762,13 +765,15 @@ footer {
     font-size: 0.9rem;
     font-weight: bold;
     color: var(--primary-color);
+    transition: color 0.3s ease;
 }
 
 .bet-details {
     display: flex;
     justify-content: space-between;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--border-color);
     padding-top: 10px;
+    transition: border-color 0.3s ease;
 }
 
 /* Bet result styles */
@@ -783,16 +788,18 @@ footer {
 }
 
 .pattern-result {
-    color: #000;
+    color: #000; /* Keep dark text for readability on gold background */
     background-color: gold;
     font-weight: bold;
     padding: 2px 5px;
     border-radius: 3px;
+    transition: background-color 0.3s ease;
 }
 
 .bet-label {
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
 }
 
 .bet-value {
