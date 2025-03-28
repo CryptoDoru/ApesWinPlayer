@@ -535,6 +535,17 @@ function fetchSettings() {
             lossRecoveryInput.value = (data.loss_recovery_rate * 100).toFixed(0);
             chaseThresholdInput.value = data.chase_69_threshold;
             chaseMultiplierInput.value = data.chase_69_multiplier.toFixed(2);
+            
+            // Update advanced strategy parameters if they exist
+            if (data.win_sensitivity !== undefined) {
+                document.getElementById('winSensitivityInput').value = (data.win_sensitivity * 100).toFixed(0);
+            }
+            if (data.loss_sensitivity !== undefined) {
+                document.getElementById('lossSensitivityInput').value = (data.loss_sensitivity * 100).toFixed(0);
+            }
+            if (data.max_track_games !== undefined) {
+                document.getElementById('maxTrackGamesInput').value = data.max_track_games;
+            }
         })
         .catch(error => console.error('Error fetching settings:', error));
 }
@@ -738,7 +749,11 @@ if (saveSettingsBtn) {
         win_streak_rate: parseInt(winStreakRateInput.value) / 100,
         loss_recovery_rate: parseInt(lossRecoveryInput.value) / 100,
         chase_69_threshold: parseInt(chaseThresholdInput.value),
-        chase_69_multiplier: parseFloat(chaseMultiplierInput.value)
+        chase_69_multiplier: parseFloat(chaseMultiplierInput.value),
+        // New advanced strategy parameters
+        win_sensitivity: parseInt(document.getElementById('winSensitivityInput').value) / 100,
+        loss_sensitivity: parseInt(document.getElementById('lossSensitivityInput').value) / 100,
+        max_track_games: parseInt(document.getElementById('maxTrackGamesInput').value)
     };
     
     // Save settings to the server

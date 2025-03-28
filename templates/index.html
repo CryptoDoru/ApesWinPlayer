@@ -235,6 +235,32 @@
                                 <div class="settings-help-text">Multiplier for each game beyond the threshold when chasing the 69 pattern</div>
                             </div>
                             
+                            <h4 class="settings-section-title">Advanced Win/Loss Strategy</h4>
+                            
+                            <div class="form-group">
+                                <label for="winSensitivityInput">Win Sensitivity (%):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="winSensitivityInput" min="10" max="100" step="5" value="50">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">How aggressively to increase bets when winning big (higher value = more aggressive)</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="lossSensitivityInput">Loss Sensitivity (%):</label>
+                                <div class="input-with-icon">
+                                    <input type="number" id="lossSensitivityInput" min="10" max="100" step="5" value="50">
+                                    <span class="input-icon">%</span>
+                                </div>
+                                <div class="settings-help-text">How quickly to reduce bets when facing big losses (higher value = more cautious)</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="maxTrackGamesInput">Games Analyzed:</label>
+                                <input type="number" id="maxTrackGamesInput" min="5" max="50" step="5" value="20">
+                                <div class="settings-help-text">Number of recent games to analyze for win/loss patterns</div>
+                            </div>
+                            
                             <div class="settings-actions">
                                 <button type="button" id="saveSettingsBtn" class="btn btn-success"><i class="fas fa-save"></i> Save</button>
                                 <button type="button" id="cancelSettingsBtn" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</button>

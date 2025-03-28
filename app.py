@@ -549,7 +549,10 @@ def get_settings():
         'win_streak_rate': current_bot.win_streak_rate,
         'loss_recovery_rate': current_bot.loss_recovery_rate,
         'chase_69_threshold': current_bot.chase_69_threshold,
-        'chase_69_multiplier': current_bot.chase_69_multiplier
+        'chase_69_multiplier': current_bot.chase_69_multiplier,
+        'win_sensitivity': getattr(current_bot, 'win_sensitivity', 0.5),
+        'loss_sensitivity': getattr(current_bot, 'loss_sensitivity', 0.5),
+        'max_track_games': getattr(current_bot, 'max_track_games', 20)
     }
     return jsonify(settings)
 
@@ -583,6 +586,14 @@ def save_settings():
         current_bot.loss_recovery_rate = float(settings['loss_recovery_rate'])
         current_bot.chase_69_threshold = int(settings['chase_69_threshold'])
         current_bot.chase_69_multiplier = float(settings['chase_69_multiplier'])
+        
+        # Update advanced strategy parameters if provided
+        if 'win_sensitivity' in settings:
+            current_bot.win_sensitivity = float(settings['win_sensitivity'])
+        if 'loss_sensitivity' in settings:
+            current_bot.loss_sensitivity = float(settings['loss_sensitivity'])
+        if 'max_track_games' in settings:
+            current_bot.max_track_games = int(settings['max_track_games'])
         
         logger.info(f"Bot settings updated for user {user_id[:8]}...")
         return jsonify({'status': 'success'})

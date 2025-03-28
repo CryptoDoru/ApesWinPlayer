@@ -61,6 +61,17 @@ class ApesWinBot:
         self.chase_69_threshold = 15  # Start chasing after this many games
         self.chase_69_multiplier = 1.1  # Increase bet by 10% for each game over threshold
         
+        # Advanced win/loss tracking
+        self.win_amounts = []  # Track actual win amounts
+        self.loss_amounts = []  # Track actual loss amounts
+        self.avg_win_amount = 0  # Average win amount as percentage of bet
+        self.avg_loss_amount = 0  # Average loss amount as percentage of bet
+        self.profit_factor = 0  # Win-to-loss ratio
+        self.risk_reward_ratio = 1.0  # Risk-reward ratio (bet more when winning more)
+        self.loss_sensitivity = 0.5  # How much to adjust for loss variations (0-1)
+        self.win_sensitivity = 0.5  # How much to adjust for win variations (0-1)
+        self.max_track_games = 20  # Maximum number of games to track for averages
+        
         # Session tracking
         self.session_start_balance = 0  # Will be set on first run
         self.session_games = 0  # Total games this session
@@ -236,6 +247,7 @@ class ApesWinBot:
             win_bonus = 1.0
             recovery = 1.0
             chase_bonus = 1.0
+            variable_bonus = 1.0
             
             # Apply win streak bonus
             if self.win_streak > 0:
@@ -252,9 +264,25 @@ class ApesWinBot:
                 games_over = self.games_since_69 - self.chase_69_threshold + 1
                 chase_bonus = min(self.chase_69_multiplier ** games_over, 3.0)  # Cap at 3x
                 logging.info(f"   69 Chase:     {chase_bonus:.2f}x 🌟")
+            
+            # Apply variable win/loss ratio adjustments if we have enough data
+            if len(self.win_amounts) > 2 and len(self.loss_amounts) > 2:
+                # Risk-reward adjustment based on profit factor
+                if self.profit_factor > 1.0:
+                    # If we're winning more than losing, adjust based on win sensitivity
+                    variable_bonus = 1.0 + ((self.profit_factor - 1.0) * self.win_sensitivity)
+                    variable_bonus = min(variable_bonus, 1.5)  # Cap at 1.5x
+                else:
+                    # If we're losing more than winning, reduce bet based on loss sensitivity
+                    variable_bonus = max(1.0 - ((1.0 - self.profit_factor) * self.loss_sensitivity), 0.5)  # Floor at 0.5x
+                
+                logging.info(f"   Win Avg:      {self.avg_win_amount:.2f}x")
+                logging.info(f"   Loss Avg:     {self.avg_loss_amount:.2f}x")
+                logging.info(f"   Profit Factor: {self.profit_factor:.2f}")
+                logging.info(f"   Risk Adjust:   {variable_bonus:.2f}x")
                 
             # Calculate the actual current bet amount with all modifiers
-            actual_bet = int(self.base_bet_amount * win_bonus * recovery * chase_bonus)
+            actual_bet = int(self.base_bet_amount * win_bonus * recovery * chase_bonus * variable_bonus)
             
             # Cap the bet at max percentage
             max_allowed_bet = int(initial_balance * self.max_bet_percentage)
@@ -293,6 +321,32 @@ class ApesWinBot:
             # If result is None, something went wrong
             if dice_results is None:
                 return None
+                
+            # Track win/loss amount relative to bet size for better strategy adjustment
+            if won:
+                # Calculate win as percentage of bet (e.g., 2x, 3x, etc.)
+                win_ratio = balance_change / self.current_bet_amount
+                self.win_amounts.append(win_ratio)
+                # Keep only last N games
+                if len(self.win_amounts) > self.max_track_games:
+                    self.win_amounts.pop(0)
+                # Update average win amount
+                self.avg_win_amount = sum(self.win_amounts) / len(self.win_amounts) if self.win_amounts else 1.0
+            else:
+                # Calculate loss as percentage of bet (usually 1.0 for full loss, but can be partial)
+                loss_ratio = abs(balance_change) / self.current_bet_amount
+                self.loss_amounts.append(loss_ratio)
+                # Keep only last N games
+                if len(self.loss_amounts) > self.max_track_games:
+                    self.loss_amounts.pop(0)
+                # Update average loss amount
+                self.avg_loss_amount = sum(self.loss_amounts) / len(self.loss_amounts) if self.loss_amounts else 1.0
+            
+            # Calculate profit factor (win-to-loss ratio)
+            if self.avg_loss_amount > 0 and self.avg_win_amount > 0:
+                self.profit_factor = self.avg_win_amount / self.avg_loss_amount
+            else:
+                self.profit_factor = 1.0
                 
             # Get dice result first
             dice_result = []
