@@ -121,43 +121,65 @@ class ApesWinBot:
         max_wait_time = 60  # seconds
         start_time = time.time()
         
+        # Add backoff strategy for retries
+        retry_count = 0
+        max_retries = 5
+        error_logged = False
+        
         while time.time() - start_time < max_wait_time:
             # Check for stop signal
             if hasattr(self, '_should_stop') and self._should_stop:
                 logging.info("🛑 Stop signal detected while waiting for game result")
                 logging.info("Game in progress will complete but no new bets will be placed")
                 # Return a signal that indicates we should stop but still wait for the result
-                # We still want to wait for this game to complete since the transaction is already on chain
-                # But we won't place any new bets after this
                 return False, 0, [0, 0, 0]  # placeholder values
             
-            # Get game result
-            result = self.contract_manager.get_game_result(game_id)
-            if result:
-                balance_change = result['total_winnings'] - result['total_bet']
-                won = balance_change > 0
+            try:
+                # Get game result with retries
+                result = self.contract_manager.get_game_result(game_id)
                 
-                # Log the result with improved formatting
-                dice_str = ", ".join(str(d) for d in result['dice_results'])
-                logging.info(f"\n🎲 DICE RESULTS: [{dice_str}]")
+                # Reset error flag if we got a response
+                if result is not None and not error_logged:
+                    retry_count = 0  # Reset retry counter on successful response
                 
-                if won:
-                    logging.info(f"✨ RESULT: WIN! +{self.format_bananas(balance_change)} 🍌")
-                else:
-                    logging.info(f"📉 RESULT: LOSS -{self.format_bananas(abs(balance_change))} 🍌")
+                if result and result.get('fulfilled', False):
+                    balance_change = result['total_winnings'] - result['total_bet']
+                    won = balance_change > 0
                     
-                # Display updated balance with visual indicator of change
-                new_balance = initial_balance + balance_change
-                percent_change = (balance_change / initial_balance) * 100 if initial_balance > 0 else 0
+                    # Log the result with improved formatting
+                    dice_str = ", ".join(str(d) for d in result['dice_results'])
+                    logging.info(f"\n🎲 DICE RESULTS: [{dice_str}]")
+                    
+                    if won:
+                        logging.info(f"✨ RESULT: WIN! +{self.format_bananas(balance_change)} 🍌")
+                    else:
+                        logging.info(f"📉 RESULT: LOSS -{self.format_bananas(abs(balance_change))} 🍌")
+                        
+                    # Display updated balance with visual indicator of change
+                    new_balance = initial_balance + balance_change
+                    percent_change = (balance_change / initial_balance) * 100 if initial_balance > 0 else 0
+                    
+                    return won, balance_change, result['dice_results']
+            except Exception as e:
+                # Only log the first error to avoid spamming
+                if not error_logged:
+                    logging.error(f"Error getting game result (will retry): {e}")
+                    error_logged = True
                 
-                return won, balance_change, result['dice_results']
+                retry_count += 1
+                if retry_count >= max_retries:
+                    logging.error(f"Max retries ({max_retries}) reached when getting game result")
+                    # Don't return yet, just continue waiting until max_wait_time
+                    retry_count = 0  # Reset for next attempt cycle
             
             # Break waiting into smaller intervals to check for stop signal more frequently
             time.sleep(0.5)
             
-        # If we get here, we timed out waiting for a result
-        logging.error(f"Timed out waiting for game result after {max_wait_time} seconds")
-        return False, 0, None
+        # If we get here, we timed out waiting for a result but we'll continue anyway
+        logging.warning(f"⚠️ Timed out waiting for game result after {max_wait_time} seconds")
+        logging.warning(f"Bot will continue with next bet assuming previous bet was lost")
+        # Return placeholder values to allow the bot to continue
+        return False, 0, [1, 1, 1]  # Placeholder values
     
     def play_dice_game(self):
         """Execute dice game strategy"""

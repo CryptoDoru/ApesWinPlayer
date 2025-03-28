@@ -973,9 +973,42 @@ function reconnectWallet(privateKey) {
     });
 }
 
+// Theme toggle functionality
+const toggleSwitch = document.getElementById('checkbox');
+
+// Function to switch theme
+function switchTheme(e) {
+    if (e.target.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        console.log('Dark mode enabled');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        console.log('Light mode enabled');
+    }
+}
+
+// Function to initialize theme based on user preference
+function initTheme() {
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    
+    if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        toggleSwitch.checked = true;
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        toggleSwitch.checked = false;
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - initializing dashboard');
+    
+    // Initialize theme toggle
+    initTheme();
+    toggleSwitch.addEventListener('change', switchTheme, false);
     
     // Initialize settings elements and listeners first
     initSettingsElements();

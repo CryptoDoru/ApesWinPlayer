@@ -1,14 +1,40 @@
 /* General Styles */
+/* Light Mode (Default) */
 :root {
     --primary-color: #4a4af4;
     --secondary-color: #e4a525;
     --background-color: #f5f5f5;
     --card-bg: #ffffff;
     --text-color: #333333;
+    --text-secondary: #666666;
+    --border-color: #e0e0e0;
+    --header-bg: #ffffff;
     --success-color: #28a745;
     --warning-color: #ffc107;
     --danger-color: #dc3545;
     --info-color: #17a2b8;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --win-color: #28a745;
+    --loss-color: #dc3545;
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+    --primary-color: #6060ff;
+    --secondary-color: #ffc107;
+    --background-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --border-color: #333333;
+    --header-bg: #1a1a1a;
+    --success-color: #2eb85c;
+    --warning-color: #f1c40f;
+    --danger-color: #e74c3c;
+    --info-color: #3498db;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --win-color: #2eb85c;
+    --loss-color: #e74c3c;
 }
 
 * {
@@ -22,6 +48,7 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dashboard {
@@ -36,8 +63,12 @@ header {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 15px 20px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--header-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    transition: all 0.3s ease;
 }
 
 .logo {
@@ -49,6 +80,68 @@ header {
     font-size: 2rem;
     color: var(--primary-color);
     margin-right: 10px;
+}
+
+/* Dark Mode Toggle Styles */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.theme-switch-label {
+    margin: 0 10px;
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 24px;
+    position: relative;
+    width: 50px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+}
+
+.slider:before {
+    background-color: white;
+    bottom: 4px;
+    content: "";
+    height: 16px;
+    left: 4px;
+    position: absolute;
+    transition: .4s;
+    width: 16px;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
 }
 
 .logo h1 {
@@ -129,9 +222,11 @@ button:disabled {
 .card {
     background-color: var(--card-bg);
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px var(--shadow-color);
     padding: 15px;
     margin-bottom: 20px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    border: 1px solid var(--border-color);
 }
 
 .card-header {
@@ -139,13 +234,15 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 8px;
+    transition: border-color 0.3s ease;
 }
 
 .card h3 {
     margin-bottom: 0;
     color: var(--primary-color);
+    transition: color 0.3s ease;
 }
 
 /* Stats Section */
@@ -218,18 +315,22 @@ button:disabled {
 .private-key-input input {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
     font-family: monospace;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 .wallet-warning {
     font-size: 12px;
-    color: #666;
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 5px;
+    transition: color 0.3s ease;
 }
 
 .wallet-warning i {
@@ -243,13 +344,15 @@ button:disabled {
 }
 
 .wallet-address code {
-    background: #f5f5f5;
+    background: var(--background-color);
     padding: 4px 8px;
     border-radius: 4px;
     font-family: monospace;
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Game Activity */
@@ -265,15 +368,16 @@ button:disabled {
 
 .game-item {
     padding: 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .game-item:hover {
-    background-color: #f9f9f9;
+    background-color: var(--background-color);
+    transition: background-color 0.3s ease;
 }
 
 .game-item:last-child {
@@ -284,10 +388,12 @@ button:disabled {
 .pattern-69 {
     background-color: rgba(255, 215, 0, 0.1);
     border-left: 3px solid gold;
+    transition: background-color 0.3s ease;
 }
 
 .pattern-69:hover {
     background-color: rgba(255, 215, 0, 0.2);
+    transition: background-color 0.3s ease;
 }
 
 .game-left {
@@ -297,15 +403,16 @@ button:disabled {
 
 .game-time {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-right: 10px;
     min-width: 60px;
 }
 
 .game-id {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-right: 10px;
+    transition: color 0.3s ease;
 }
 
 .dice-result {
@@ -320,11 +427,12 @@ button:disabled {
     align-items: center;
     justify-content: center;
     border-radius: 5px;
-    background-color: #f0f0f0;
+    background-color: var(--border-color);
     font-weight: bold;
     color: white;
     font-size: 1.1rem;
-    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 3px var(--shadow-color);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Dice colors for different values */
@@ -381,15 +489,17 @@ button:disabled {
 .profit-container {
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px dashed #eee;
+    border-top: 1px dashed var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: border-color 0.3s ease;
 }
 
 .profit-label {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
 }
 
 .game-result {
@@ -451,11 +561,14 @@ button:disabled {
 .log-messages {
     flex: 1;
     overflow-y: auto;
-    background-color: #222;
+    background-color: #111;
     padding: 10px;
     border-radius: 4px;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    /* Keep log area dark in both themes but adjust border color */
+    transition: border-color 0.3s ease;
 }
 
 .log-entry {
@@ -496,9 +609,10 @@ button:disabled {
 footer {
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
+    transition: border-color 0.3s ease;
 }
 
 /* Special Pattern Styles */
@@ -525,19 +639,22 @@ footer {
 }
 
 .status-indicator.offline {
-    background-color: #f8d7da;
+    background-color: rgba(220, 53, 69, 0.2);
     color: var(--danger-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .status-indicator.online {
-    background-color: #d4edda;
+    background-color: rgba(40, 167, 69, 0.2);
     color: var(--success-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .status-indicator.betting {
-    background-color: #fff3cd;
+    background-color: rgba(255, 193, 7, 0.2);
     color: var(--warning-color);
     animation: pulse 1.5s infinite;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .status-indicator.win {
@@ -584,18 +701,20 @@ footer {
 
 .win-result {
     font-weight: bold;
-    color: var(--success-color);
+    color: var(--win-color);
     background-color: rgba(40, 167, 69, 0.1);
     padding: 2px 8px;
     border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .loss-result {
     font-weight: bold;
-    color: var(--danger-color);
+    color: var(--loss-color);
     background-color: rgba(220, 53, 69, 0.1);
     padding: 2px 8px;
     border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .current-bet-container {
@@ -691,12 +810,14 @@ footer {
 
 /* Settings Form Styles */
 .settings-card .card-header {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 8px;
+    transition: border-color 0.3s ease;
 }
 
 .settings-form {
     padding: 10px 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .form-group {
@@ -707,15 +828,19 @@ footer {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
-    color: #444;
+    color: var(--text-color);
+    transition: color 0.3s ease;
 }
 
 .form-group input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 .input-with-icon {
@@ -736,8 +861,9 @@ footer {
 
 .settings-help-text {
     font-size: 12px;
-    color: #777;
+    color: var(--text-secondary);
     margin-top: 4px;
+    transition: color 0.3s ease;
 }
 
 .settings-actions {

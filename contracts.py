@@ -156,28 +156,53 @@ class ContractManager:
         Returns:
             Optional[Dict]: Game result info or None if not found/fulfilled
         """
-        try:
-            # Get game info directly
-            game_info = self.contract.functions.getUserLastGameInfo(self.account.address).call()
-            if game_info[0] != game_id:
-                # Not our game
-                return None
+        # Retry mechanism for blockchain calls
+        max_retries = 3
+        backoff_time = 0.5  # Start with 0.5 second backoff
+        
+        for attempt in range(max_retries):
+            try:
+                # Add a small delay before retries (not on first attempt)
+                if attempt > 0:
+                    time.sleep(backoff_time)
+                    backoff_time *= 2  # Exponential backoff
+                    logging.info(f"Retry {attempt}/{max_retries} for game result (game_id: {game_id})")
                 
-            round_info = game_info[1]
-            if not round_info[0]:  # not fulfilled
-                return None
+                # Get game info directly
+                game_info = self.contract.functions.getUserLastGameInfo(self.account.address).call()
                 
-            return {
-                'fulfilled': round_info[0],  # fulfilled
-                'user': round_info[1],       # user address
-                'total_bet': round_info[2],  # totalBet
-                'total_winnings': round_info[3], # totalWinnings
-                'bet_amounts': round_info[4],    # betAmounts
-                'dice_results': round_info[5]    # diceRollResult
-            }
-        except Exception as e:
-            logging.error(f"Error getting game result: {e}")
-            return None
+                # Handle case where game_id doesn't match
+                if game_info[0] != game_id:
+                    if attempt == max_retries - 1:  # Only log on last retry
+                        logging.warning(f"Game ID mismatch: expected {game_id}, got {game_info[0]}")
+                    continue  # Try again
+                
+                round_info = game_info[1]
+                if not round_info[0]:  # not fulfilled
+                    if attempt == max_retries - 1:  # Only log on last retry
+                        logging.info(f"Game {game_id} not yet fulfilled, waiting...")
+                    return {'fulfilled': False, 'game_id': game_id}  # Return partial result
+                
+                # Successfully got the result
+                return {
+                    'fulfilled': round_info[0],  # fulfilled
+                    'user': round_info[1],       # user address
+                    'total_bet': round_info[2],  # totalBet
+                    'total_winnings': round_info[3], # totalWinnings
+                    'bet_amounts': round_info[4],    # betAmounts
+                    'dice_results': round_info[5]    # diceRollResult
+                }
+            except Exception as e:
+                if attempt == max_retries - 1:  # Only log detailed error on last retry
+                    logging.error(f"Error getting game result (attempt {attempt+1}/{max_retries}): {e}")
+                    # Add more detailed error info on last retry
+                    logging.error(f"Detailed error info: {type(e).__name__}")
+                else:
+                    # Simple log for intermediate retries
+                    logging.warning(f"Retrying game result fetch (attempt {attempt+1}/{max_retries})")
+        
+        logging.error(f"Failed to get game result after {max_retries} attempts for game_id {game_id}")
+        return None
     
     def check_bet_amount(self, amount: int) -> bool:
         """Check if we have enough balance for the bet
