@@ -2,7 +2,9 @@
 /* Light Mode (Default) */
 :root {
     --primary-color: #4a4af4;
+    --primary-rgb: 74, 74, 244;
     --secondary-color: #e4a525;
+    --secondary-rgb: 228, 165, 37;
     --background-color: #f5f5f5;
     --card-bg: #ffffff;
     --text-color: #333333;
@@ -10,8 +12,11 @@
     --border-color: #e0e0e0;
     --header-bg: #ffffff;
     --success-color: #28a745;
+    --success-rgb: 40, 167, 69;
     --warning-color: #ffc107;
+    --warning-rgb: 255, 193, 7;
     --danger-color: #dc3545;
+    --danger-rgb: 220, 53, 69;
     --info-color: #17a2b8;
     --shadow-color: rgba(0, 0, 0, 0.1);
     --win-color: #28a745;
@@ -21,7 +26,9 @@
 /* Dark Mode */
 [data-theme="dark"] {
     --primary-color: #6060ff;
+    --primary-rgb: 96, 96, 255;
     --secondary-color: #ffc107;
+    --secondary-rgb: 255, 193, 7;
     --background-color: #121212;
     --card-bg: #1e1e1e;
     --text-color: #f0f0f0;
@@ -216,6 +223,14 @@ button:disabled {
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 20px;
+}
+
+/* Adjust settings card to span full width */
+.settings-card {
+    grid-column: 1 / -1; /* Make settings card span full width */
+    margin-top: 0;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* Card Styles */
@@ -822,24 +837,109 @@ footer {
     transition: border-color 0.3s ease;
 }
 
+/* This rule has been consolidated with the one in the main content layout section */
+
 .settings-form {
-    padding: 10px 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.settings-card {
+    grid-column: 1 / -1; /* Make settings card span full width */
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0;
+    box-sizing: border-box;
+}
+
+/* Full-width settings layout */
+.settings-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    width: 100%;
+    padding: 20px;
+}
+
+.settings-section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    box-sizing: border-box;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    width: 100%;
+    padding: 20px;
+    margin: 0 auto;
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(var(--primary-rgb), 0.05);
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid rgba(var(--primary-rgb), 0.1);
+    width: 100%;
 }
 
 .form-group {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed rgba(var(--primary-rgb), 0.15);
+}
+
+.settings-section-title {
+    color: var(--primary-color);
+    font-size: 1.1rem;
     margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.3);
 }
 
 .form-group label {
-    display: block;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 5px;
     font-weight: 500;
     color: var(--text-color);
     transition: color 0.3s ease;
 }
 
-.form-group input {
+.settings-value-display {
+    font-weight: bold;
+    color: var(--primary-color);
+    transition: color 0.3s ease;
+}
+
+/* View mode horizontal layout */
+.settings {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.settings-section {
+    grid-column: 1 / -1;
+    margin-top: 15px;
+    padding-top: 5px;
+}
+
+.settings-section .settings-inner {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.form-group input[type="number"] {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
@@ -848,6 +948,104 @@ footer {
     background-color: var(--card-bg);
     color: var(--text-color);
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Slider styles */
+.form-group input[type="range"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: calc(100% - 80px);
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-color);
+    outline: none;
+    margin: 24px 0;
+    transition: background 0.3s ease;
+    flex: 1;
+    min-width: 300px;
+    position: relative;
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    border: 1px solid white;
+    margin-top: -5px; /* Essential for proper vertical centering */
+}
+
+.form-group input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 1px solid white;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.form-group input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.form-group input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+/* Slider value display */
+.slider-value {
+    display: inline-block;
+    margin-left: 10px;
+    font-weight: bold;
+    color: var(--primary-color);
+    min-width: 50px;
+    text-align: center;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    padding: 10px 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    width: 100%;
+}
+
+[data-theme="dark"] .slider-container {
+    background-color: rgba(40, 40, 40, 0.6);
+}
+
+.settings-help-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.slider-container label {
+    margin-bottom: 5px;
+    display: block;
+    font-weight: 500;
 }
 
 .input-with-icon {
@@ -881,6 +1079,11 @@ footer {
     padding-bottom: 5px;
     border-bottom: 1px dashed var(--border-color);
     transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.settings-section {
+    margin-top: 15px;
+    padding-top: 5px;
 }
 
 .settings-actions {
